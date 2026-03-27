@@ -9,6 +9,7 @@ const prisma = new PrismaClient({
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
+  trustedOrigins: [process.env.CLIENT_ORIGIN!],
   emailAndPassword: { enabled: true, disableSignUp: true },
   user: {
     additionalFields: {

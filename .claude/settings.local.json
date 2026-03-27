@@ -6,7 +6,12 @@
       "WebFetch(domain:www.better-auth.com)",
       "Bash(bunx prisma:*)",
       "Bash(curl -s http://localhost:5150/api/auth/ok)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(find /c/Users/billy/source/repos/helpdesk/server/src -type f -name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js)",
+      "mcp__context7__resolve-library-id",
+      "WebSearch",
+      "WebFetch(domain:better-auth.com)",
+      "Bash(bun run:*)"
     ]
   }
 }
