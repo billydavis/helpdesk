@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "mcp__context7__query-docs",
-      "Bash(bun install:*)"
+      "Bash(bun install:*)",
+      "WebFetch(domain:www.better-auth.com)",
+      "Bash(bunx prisma:*)",
+      "Bash(curl -s http://localhost:5150/api/auth/ok)",
+      "Bash(curl:*)"
     ]
   }
 }
