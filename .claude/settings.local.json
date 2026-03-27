@@ -11,7 +11,8 @@
       "mcp__context7__resolve-library-id",
       "WebSearch",
       "WebFetch(domain:better-auth.com)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(bunx shadcn@latest add input card)"
     ]
   }
 }

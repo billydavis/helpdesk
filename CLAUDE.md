@@ -30,8 +30,30 @@ helpdesk/
 
 - Bun workspaces monorepo — client and server share a single `bun.lock`
 - Vite proxies `/api/*` to the Express server — no CORS issues in development
-- Database sessions stored in PostgreSQL — no third-party auth service
 - Single admin seeded on first deploy; admin creates agent accounts
+
+## Tailwind CSS
+
+- Using Tailwind CSS v4 via the `@tailwindcss/vite` plugin — no `tailwind.config.js` needed
+- Do not use raw HTML elements with long inline className strings — use shadcn/ui components instead
+- Theme tokens (`bg-card`, `text-muted-foreground`, etc.) are defined as CSS custom properties in `index.css`
+
+## shadcn/ui
+
+- Component library built on Radix UI + Tailwind CSS
+- Add new components via: `bunx shadcn@latest add <component>` from the `client/` directory
+- Components are installed to `client/src/components/ui/`
+- Always prefer shadcn/ui components (`Input`, `Card`, `Button`, etc.) over raw HTML elements
+- Only use `.tsx` files — never create or maintain `.js` duplicates (Vite resolves `.js` before `.tsx`, causing `.tsx` edits to have no effect)
+
+## Authentication
+
+- Powered by [Better Auth](https://better-auth.com)
+- Server config: `server/src/auth.ts` — uses Prisma adapter with PostgreSQL
+- Client config: `client/src/lib/auth-client.ts` — `createAuthClient()` from `better-auth/react`
+- Email/password auth only; sign-up is disabled (accounts created by admin)
+- Users have a `role` field: `admin` or `agent` (default)
+- Better Auth context7 library ID: `/better-auth/better-auth`
 
 ## Ticket Model
 
@@ -56,3 +78,5 @@ Key library IDs for this project:
 - Vite: `/vitejs/vite`
 - Tailwind CSS: `/tailwindlabs/tailwindcss`
 - React Router: `/remix-run/react-router`
+- Better Auth: `/better-auth/better-auth`
+- shadcn/ui: `/shadcn-ui/ui`

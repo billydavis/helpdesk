@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -38,50 +40,51 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Helpdesk</h1>
-          <p className="text-sm text-muted-foreground">Sign in to your account</p>
-        </div>
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="w-full max-w-sm">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle>Helpdesk</CardTitle>
+            <CardDescription>Sign in to your account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="email">Email</label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  className={errors.email ? "border-destructive" : ""}
+                  {...register("email")}
+                />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              </div>
 
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                className={`w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${errors.email ? "border-destructive" : "border-input"}`}
-                {...register("email")}
-              />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="password">Password</label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className={errors.password ? "border-destructive" : ""}
+                  {...register("password")}
+                />
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                className={`w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${errors.password ? "border-destructive" : "border-input"}`}
-                {...register("password")}
-              />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
+              {errors.root && (
+                <p role="alert" className="text-sm text-destructive">{errors.root.message}</p>
+              )}
 
-            {errors.root && (
-              <p role="alert" className="text-sm text-destructive">{errors.root.message}</p>
-            )}
-
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Signing in…" : "Sign In"}
-            </Button>
-          </form>
-        </div>
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? "Signing in…" : "Sign In"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
