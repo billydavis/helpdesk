@@ -1,0 +1,9 @@
+{
+  "name": "helpdesk",
+  "version": "1.0.0",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "build": "bun run --filter '*' build"
+  }
+}
