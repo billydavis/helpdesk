@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Vite
+client/.vite/
+
+# Bun
+bun.lock
+
+# OS
+.DS_Store
+Thumbs.db
