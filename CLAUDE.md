@@ -60,14 +60,9 @@ helpdesk/
 - `client/src/components/AdminRoute.tsx` guards routes to admin-only users — wrap `<Route>` elements in `App.tsx` with it
 - For conditional nav items, check `session?.user.role === "admin"` directly in the component
 
-## E2E Testing (Playwright)
+## E2E Testing
 
-- Config: `playwright.config.ts` (root) — loads `server/.env.test`, single Chromium worker, HTML reporter
-- Tests live in `e2e/`; run with `bun run test:e2e`
-- Global setup: `e2e/global-setup.ts` — drops/recreates `helpdesk_test` DB, runs `prisma migrate deploy`, seeds admin on every run
-- Test env: `server/.env.test` (gitignored) — points to `helpdesk_test` database with test credentials
-- `pg` must remain in root `devDependencies` (not just `server/`) — global-setup runs in the root Playwright context
-- Playwright library ID: `/microsoft/playwright`
+Use the `playwright-e2e-writer` agent for all Playwright test writing. Do not write e2e tests directly — delegate to the agent.
 
 ## Rate Limiting
 
