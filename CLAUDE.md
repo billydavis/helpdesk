@@ -60,6 +60,21 @@ helpdesk/
 - `client/src/components/AdminRoute.tsx` guards routes to admin-only users — wrap `<Route>` elements in `App.tsx` with it
 - For conditional nav items, check `session?.user.role === "admin"` directly in the component
 
+## E2E Testing (Playwright)
+
+- Config: `playwright.config.ts` (root) — loads `server/.env.test`, single Chromium worker, HTML reporter
+- Tests live in `e2e/`; run with `bun run test:e2e`
+- Global setup: `e2e/global-setup.ts` — drops/recreates `helpdesk_test` DB, runs `prisma migrate deploy`, seeds admin on every run
+- Test env: `server/.env.test` (gitignored) — points to `helpdesk_test` database with test credentials
+- `pg` must remain in root `devDependencies` (not just `server/`) — global-setup runs in the root Playwright context
+- Playwright library ID: `/microsoft/playwright`
+
+## Rate Limiting
+
+- Express rate limiters are gated on `process.env.NODE_ENV === "production"` (see `server/src/index.ts`)
+- Disabled in development and test environments — Playwright sets `NODE_ENV=test` for the server subprocess
+- When adding new rate-limited routes, follow the `...(isProduction ? [limiter] : [])` spread pattern
+
 ## Ticket Model
 
 - **Statuses:** open, resolved, closed

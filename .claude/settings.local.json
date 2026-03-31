@@ -17,7 +17,8 @@
       "Bash(bun run:*)",
       "Bash(bunx shadcn@latest add input card)",
       "Bash(bun tsc:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(bunx playwright:*)"
     ]
   }
 }

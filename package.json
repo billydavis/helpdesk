@@ -4,6 +4,15 @@
   "workspaces": ["client", "server"],
   "scripts": {
     "dev": "bun run --filter '*' dev",
-    "build": "bun run --filter '*' build"
+    "build": "bun run --filter '*' build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.3.1",
+    "pg": "^8.20.0"
   }
 }

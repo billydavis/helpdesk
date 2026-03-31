@@ -31,9 +31,19 @@ const authLimiter = rateLimit({
   message: { error: "Too many requests, please try again later." },
 });
 
+const isProduction = process.env.NODE_ENV === "production";
+
 // Must be mounted before express.json()
-app.post("/api/auth/sign-in/email", signInLimiter, toNodeHandler(auth));
-app.all("/api/auth/*", authLimiter, toNodeHandler(auth));
+app.post(
+  "/api/auth/sign-in/email",
+  ...(isProduction ? [signInLimiter] : []),
+  toNodeHandler(auth)
+);
+app.all(
+  "/api/auth/*",
+  ...(isProduction ? [authLimiter] : []),
+  toNodeHandler(auth)
+);
 
 app.use(express.json());
 
