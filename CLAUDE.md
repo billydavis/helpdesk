@@ -55,6 +55,11 @@ helpdesk/
 - Users have a `role` field: `admin` or `agent` (default)
 - Better Auth context7 library ID: `/better-auth/better-auth`
 
+## Authorization
+
+- `client/src/components/AdminRoute.tsx` guards routes to admin-only users — wrap `<Route>` elements in `App.tsx` with it
+- For conditional nav items, check `session?.user.role === "admin"` directly in the component
+
 ## Ticket Model
 
 - **Statuses:** open, resolved, closed

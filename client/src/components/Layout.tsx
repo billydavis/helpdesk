@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router";
+import { Outlet, useNavigate, NavLink } from "react-router";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +15,19 @@ export default function Layout() {
     <div className="min-h-screen bg-background">
       <nav className="border-b bg-card">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-          <span className="font-semibold">Helpdesk</span>
+          <div className="flex items-center gap-6">
+            <span className="font-semibold">Helpdesk</span>
+            {session?.user.role === "admin" && (
+              <NavLink
+                to="/users"
+                className={({ isActive }) =>
+                  `text-sm font-medium ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`
+                }
+              >
+                Users
+              </NavLink>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{session?.user.name}</span>
             <Button variant="outline" size="sm" onClick={handleSignOut}>

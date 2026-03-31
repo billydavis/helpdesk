@@ -1,8 +1,10 @@
 import { Routes, Route } from "react-router";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import UsersPage from "./pages/UsersPage";
 
 export default function App() {
   return (
@@ -16,6 +18,14 @@ export default function App() {
         }
       >
         <Route path="/" element={<HomePage />} />
+        <Route
+          path="/users"
+          element={
+            <AdminRoute>
+              <UsersPage />
+            </AdminRoute>
+          }
+        />
       </Route>
     </Routes>
   );
