@@ -12,6 +12,11 @@ if (!email || !password) {
   process.exit(1);
 }
 
+if (password.length < 12) {
+  console.error("SEED_ADMIN_PASSWORD must be at least 12 characters");
+  process.exit(1);
+}
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });

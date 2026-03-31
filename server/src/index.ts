@@ -1,15 +1,39 @@
 import express from "express";
 import cors from "cors";
-import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
+import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
+import { requireAuth, requireRole } from "./middleware/auth";
+
+// CLIENT_ORIGIN is validated in auth.ts (imported above)
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN!;
 
 const app = express();
 const PORT = process.env.PORT || 5150;
 
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(helmet());
+app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+
+const signInLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, please try again later." },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
 
 // Must be mounted before express.json()
-app.all("/api/auth/*", toNodeHandler(auth));
+app.post("/api/auth/sign-in/email", signInLimiter, toNodeHandler(auth));
+app.all("/api/auth/*", authLimiter, toNodeHandler(auth));
 
 app.use(express.json());
 
@@ -17,11 +41,17 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/api/me", async (req, res) => {
-  const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-  if (!session) return res.status(401).json({ error: "Unauthenticated" });
-  res.json(session);
+app.get("/api/me", requireAuth, (req, res) => {
+  if (!req.authSession) return void res.status(401).json({ error: "Unauthenticated" });
+  const { id, name, email, role } = req.authSession.user;
+  res.json({ user: { id, name, email, role } });
 });
+
+// Admin-only routes — both requireAuth and requireRole("admin") are pre-applied
+const adminRouter = express.Router();
+adminRouter.use(requireAuth);
+adminRouter.use(requireRole("admin"));
+app.use("/api/admin", adminRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

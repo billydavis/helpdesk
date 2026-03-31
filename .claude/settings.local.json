@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CONTEXT7_API_KEY": "ctx7sk-70870f33-2d90-446e-b3e0-0f9d82f53e69"
+  },
   "permissions": {
     "allow": [
       "mcp__context7__query-docs",
@@ -12,7 +15,9 @@
       "WebSearch",
       "WebFetch(domain:better-auth.com)",
       "Bash(bun run:*)",
-      "Bash(bunx shadcn@latest add input card)"
+      "Bash(bunx shadcn@latest add input card)",
+      "Bash(bun tsc:*)",
+      "Bash(node:*)"
     ]
   }
 }
