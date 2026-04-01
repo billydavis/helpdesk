@@ -68,6 +68,19 @@ helpdesk/
 - `client/src/components/AdminRoute.tsx` guards routes to admin-only users — wrap `<Route>` elements in `App.tsx` with it
 - For conditional nav items, check `session?.user.role === "admin"` directly in the component
 
+## Component & Unit Testing
+
+- **Framework**: Vitest + React Testing Library
+- **Run tests**: `bun run test` from the `client/` directory (or `test:watch` for watch mode)
+- Test files live in `client/src/test/` and use the `.test.tsx` extension
+- Use `renderWithProviders` from `client/src/test/render.tsx` to render components — it wraps with `QueryClientProvider`
+- Use **MSW** (`msw/node`) to intercept and mock API calls — never mock axios or TanStack Query internals directly
+  - Define handlers with `http.get/post/delete` from `msw`
+  - Call `server.resetHandlers()` in `afterEach` and `server.close()` in `afterAll`
+  - Override handlers per-test with `server.use(...)` for error and edge cases
+- Use `userEvent` (not `fireEvent`) for simulating user interactions
+- Query the DOM with accessible queries (`getByRole`, `getByLabelText`, `getByText`) — avoid `getByTestId`
+
 ## E2E Testing
 
 Use the `playwright-e2e-writer` agent for all Playwright test writing. Do not write e2e tests directly — delegate to the agent.
