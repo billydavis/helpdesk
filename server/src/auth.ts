@@ -1,8 +1,7 @@
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "./generated/prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { prisma } from "./db";
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN;
 if (!CLIENT_ORIGIN) throw new Error("CLIENT_ORIGIN environment variable is required");
@@ -11,10 +10,6 @@ const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET;
 if (!BETTER_AUTH_SECRET || BETTER_AUTH_SECRET.length < 32) {
   throw new Error("BETTER_AUTH_SECRET must be set to a random string of 32+ characters");
 }
-
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
-});
 
 export const auth = betterAuth({
   secret: BETTER_AUTH_SECRET,
