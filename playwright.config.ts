@@ -13,7 +13,7 @@ export default defineConfig({
   reporter: "html",
   globalSetup: "./e2e/global-setup.ts",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost:5174",
     trace: "on-first-retry",
   },
   projects: [
@@ -25,21 +25,31 @@ export default defineConfig({
   webServer: [
     {
       name: "Server",
-      command: "NODE_ENV=test bun run src/index.ts",
+      command: "bun run src/index.ts",
       cwd: path.resolve(__dirname, "server"),
-      url: "http://localhost:5150/api/health",
+      url: "http://localhost:5151/api/health",
       reuseExistingServer: !process.env.CI,
       stdout: "pipe",
       stderr: "pipe",
+      env: {
+        ...process.env,
+        NODE_ENV: "test",
+        PORT: "5151",
+      },
     },
     {
       name: "Client",
       command: "bun run dev",
       cwd: path.resolve(__dirname, "client"),
-      url: "http://localhost:5173",
+      url: "http://localhost:5174",
       reuseExistingServer: !process.env.CI,
       stdout: "pipe",
       stderr: "pipe",
+      env: {
+        ...process.env,
+        VITE_PORT: "5174",
+        API_TARGET: "http://localhost:5151",
+      },
     },
   ],
 });

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate } from "react-router";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import Layout from "./components/Layout";
@@ -26,6 +26,7 @@ export default function App() {
             </AdminRoute>
           }
         />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
