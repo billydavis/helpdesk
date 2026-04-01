@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,62 +35,66 @@ const createUserSchema = z.object({
 type CreateUserValues = z.infer<typeof createUserSchema>;
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const { data, isError } = useQuery({
+    queryKey: ["users"],
+    queryFn: () =>
+      axios.get<{ users: User[] }>("/api/admin/users").then((r) => r.data.users),
+  });
+
+  const users = data ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: (values: CreateUserValues) => axios.post("/api/admin/users", values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      reset();
+      setShowForm(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => axios.delete(`/api/admin/users/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setDeleteError(null);
+    },
+    onError: (err) => {
+      const message = axios.isAxiosError(err)
+        ? (err.response?.data?.error ?? "Failed to delete user.")
+        : "Failed to delete user.";
+      setDeleteError(message);
+    },
+  });
 
   const {
     register,
     handleSubmit,
     reset,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<CreateUserValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: { role: "agent" },
   });
 
-  async function loadUsers() {
-    const res = await fetch("/api/admin/users");
-    if (!res.ok) {
-      setLoadError("Failed to load users.");
-      return;
-    }
-    const data = await res.json();
-    setUsers(data.users);
-  }
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  async function onSubmit(values: CreateUserValues) {
-    const res = await fetch("/api/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
+  function onSubmit(values: CreateUserValues) {
+    createMutation.mutate(values, {
+      onError: (err) => {
+        const message = axios.isAxiosError(err)
+          ? (err.response?.data?.error ?? "Failed to create user.")
+          : "Failed to create user.";
+        setError("root", { message });
+      },
     });
-    const data = await res.json();
-    if (!res.ok) {
-      setError("root", { message: data.error ?? "Failed to create user." });
-      return;
-    }
-    reset();
-    setShowForm(false);
-    loadUsers();
   }
 
   async function handleDelete(userId: string, userName: string) {
     if (!confirm(`Delete user "${userName}"? This cannot be undone.`)) return;
-    setDeleteError(null);
-    const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) {
-      setDeleteError(data.error ?? "Failed to delete user.");
-      return;
-    }
-    loadUsers();
+    deleteMutation.mutate(userId);
   }
 
   return (
@@ -140,15 +146,15 @@ export default function UsersPage() {
                 <p role="alert" className="text-sm text-destructive">{errors.root.message}</p>
               )}
 
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating…" : "Create User"}
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Creating…" : "Create User"}
               </Button>
             </form>
           </CardContent>
         </Card>
       )}
 
-      {loadError && <p className="text-sm text-destructive">{loadError}</p>}
+      {isError && <p className="text-sm text-destructive">Failed to load users.</p>}
       {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
 
       <Card>
@@ -188,6 +194,7 @@ export default function UsersPage() {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       onClick={() => handleDelete(user.id, user.name)}
+                      disabled={deleteMutation.isPending}
                     >
                       Delete
                     </Button>

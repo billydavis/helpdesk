@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 export default function HomePage() {
-  const [status, setStatus] = useState<string | null>(null);
+  const { data, isError } = useQuery({
+    queryKey: ["health"],
+    queryFn: () => axios.get<{ status: string }>("/api/health").then((r) => r.data),
+  });
 
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => res.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus("error"));
-  }, []);
+  const status = isError ? "error" : (data?.status ?? null);
 
   return (
     <div className="space-y-4">

@@ -46,6 +46,14 @@ helpdesk/
 - Always prefer shadcn/ui components (`Input`, `Card`, `Button`, etc.) over raw HTML elements
 - Only use `.tsx` files — never create or maintain `.js` duplicates (Vite resolves `.js` before `.tsx`, causing `.tsx` edits to have no effect)
 
+## Data Fetching
+
+- Use **axios** for all HTTP requests — never use `fetch` directly
+- Use **TanStack Query** (`@tanstack/react-query`) for all server state in React components
+  - `useQuery` for reads, `useMutation` for writes
+  - Always call `queryClient.invalidateQueries` on mutation success to keep data fresh
+- `QueryClientProvider` is set up in `client/src/main.tsx`
+
 ## Authentication
 
 - Powered by [Better Auth](https://better-auth.com)
@@ -95,3 +103,5 @@ Key library IDs for this project:
 - React Router: `/remix-run/react-router`
 - Better Auth: `/better-auth/better-auth`
 - shadcn/ui: `/shadcn-ui/ui`
+- TanStack Query: `/tanstack/query`
+- Axios: `/axios/axios`
