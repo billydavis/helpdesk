@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -80,6 +80,31 @@ describe("UsersPage", () => {
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     });
 
+    it("closes when clicking outside the dialog", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      // Radix closes on pointerdown outside; body has pointer-events:none while dialog is open
+      fireEvent.pointerDown(document.body);
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("closes when pressing Escape", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
     it("shows validation errors for empty submission", async () => {
       const user = userEvent.setup();
       renderWithProviders(<UsersPage />);
@@ -93,6 +118,106 @@ describe("UsersPage", () => {
         expect(screen.getByText("Enter a valid email address")).toBeInTheDocument();
         expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
       });
+    });
+
+    it("shows an error when name is too short", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      await user.type(screen.getByLabelText("Name"), "ab");
+      await user.type(screen.getByLabelText("Email"), "carol@example.com");
+      await user.type(screen.getByLabelText("Password"), "supersecret");
+      await user.click(screen.getByRole("button", { name: "Create User" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Name must be at least 3 characters")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("Enter a valid email address")).not.toBeInTheDocument();
+      expect(screen.queryByText("Password must be at least 8 characters")).not.toBeInTheDocument();
+    });
+
+    it("shows an error for an invalid email address", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      await user.type(screen.getByLabelText("Name"), "Carol New");
+      await user.type(screen.getByLabelText("Email"), "not-an-email");
+      await user.type(screen.getByLabelText("Password"), "supersecret");
+      await user.click(screen.getByRole("button", { name: "Create User" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Enter a valid email address")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("Name must be at least 3 characters")).not.toBeInTheDocument();
+      expect(screen.queryByText("Password must be at least 8 characters")).not.toBeInTheDocument();
+    });
+
+    it("shows an error when password is too short", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      await user.type(screen.getByLabelText("Name"), "Carol New");
+      await user.type(screen.getByLabelText("Email"), "carol@example.com");
+      await user.type(screen.getByLabelText("Password"), "short");
+      await user.click(screen.getByRole("button", { name: "Create User" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument()
+      );
+      expect(screen.queryByText("Name must be at least 3 characters")).not.toBeInTheDocument();
+      expect(screen.queryByText("Enter a valid email address")).not.toBeInTheDocument();
+    });
+
+    it("disables the submit button and shows 'Creating…' while the request is in-flight", async () => {
+      let unblock: () => void;
+      const blocked = new Promise<void>(r => { unblock = r; });
+      server.use(
+        http.post("/api/admin/users", async () => {
+          await blocked;
+          return HttpResponse.json({ success: true }, { status: 201 });
+        })
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      await user.type(screen.getByLabelText("Name"), "Carol New");
+      await user.type(screen.getByLabelText("Email"), "carol@example.com");
+      await user.type(screen.getByLabelText("Password"), "supersecret");
+      await user.click(screen.getByRole("button", { name: "Create User" }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Creating…" })).toBeDisabled()
+      );
+
+      unblock!();
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("resets the form fields when the dialog is closed and reopened", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      await user.type(screen.getByLabelText("Name"), "Carol New");
+      await user.type(screen.getByLabelText("Email"), "carol@example.com");
+
+      await user.click(screen.getByRole("button", { name: "Close" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      expect(screen.getByLabelText("Name")).toHaveValue("");
+      expect(screen.getByLabelText("Email")).toHaveValue("");
+      expect(screen.getByLabelText("Password")).toHaveValue("");
     });
 
     it("submits the form and closes the modal on success", async () => {
