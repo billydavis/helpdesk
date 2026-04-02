@@ -19,7 +19,8 @@
       "Bash(bun tsc:*)",
       "Bash(node:*)",
       "Bash(bunx playwright:*)",
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(npx playwright:*)"
     ]
   }
 }

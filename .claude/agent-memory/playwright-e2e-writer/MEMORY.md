@@ -5,3 +5,4 @@
 - [Better Auth sign-in behavior](better_auth_signin_behavior.md) — Error surfaces as role="alert" para; short password rejected server-side; disableSignUp returns 403
 - [Route protection behavior](route_protection_behavior.md) — ProtectedRoute redirects to /login; AdminRoute redirects agent to /
 - [Agent creation helper](agent_creation_helper.md) — e2e/helpers/create-agent.ts mirrors seed.ts using Prisma + hashPassword
+- [User management test patterns](user_management_patterns.md) — API seeding in beforeEach, dialog scoping, row targeting by email, admin row has no Delete button
