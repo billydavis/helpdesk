@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import axios from "axios";
+import { Pencil, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EditUserDialog } from "@/components/EditUserDialog";
 
 type User = {
   id: string;
@@ -25,6 +27,7 @@ type User = {
 export function UsersTable() {
   const queryClient = useQueryClient();
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   const { data, isError, isLoading } = useQuery({
     queryKey: ["users"],
@@ -55,6 +58,11 @@ export function UsersTable() {
 
   return (
     <>
+      <EditUserDialog
+        user={editingUser}
+        open={editingUser !== null}
+        onOpenChange={(open) => { if (!open) setEditingUser(null); }}
+      />
       {isError && <p className="text-sm text-destructive">Failed to load users.</p>}
       {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
 
@@ -105,12 +113,21 @@ export function UsersTable() {
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
+                      size="icon"
+                      aria-label="Edit"
+                      onClick={() => setEditingUser(user)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Delete"
+                      className="text-muted-foreground hover:text-destructive"
                       onClick={() => handleDelete(user.id, user.name)}
                       disabled={deleteMutation.isPending}
                     >
-                      Delete
+                      <Trash2 />
                     </Button>
                   </TableCell>
                 </TableRow>

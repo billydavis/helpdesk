@@ -14,6 +14,7 @@ const USERS = [
 const server = setupServer(
   http.get("/api/admin/users", () => HttpResponse.json({ users: USERS })),
   http.post("/api/admin/users", () => HttpResponse.json({ success: true }, { status: 201 })),
+  http.patch("/api/admin/users/:id", () => HttpResponse.json({ success: true })),
   http.delete("/api/admin/users/:id", () => HttpResponse.json({ success: true })),
 );
 
@@ -255,6 +256,172 @@ describe("UsersPage", () => {
       await waitFor(() =>
         expect(screen.getByText("A user with that email already exists.")).toBeInTheDocument()
       );
+    });
+  });
+
+  describe("edit user", () => {
+    it("each row has an Edit button", async () => {
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const dataRows = screen.getAllByRole("row").slice(1);
+      for (const row of dataRows) {
+        expect(within(row).getByRole("button", { name: /edit/i })).toBeInTheDocument();
+      }
+    });
+
+    it("opens the dialog pre-populated with the user's data", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Name")).toHaveValue("Alice Admin");
+      expect(screen.getByLabelText("Email")).toHaveValue("alice@example.com");
+      expect(screen.getByLabelText(/new password/i)).toHaveValue("");
+    });
+
+    it("saves changes and closes the dialog on success", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      await user.clear(screen.getByLabelText("Name"));
+      await user.type(screen.getByLabelText("Name"), "Alice Updated");
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("saves successfully when the password field is left blank", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      // leave password blank
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("saves successfully when a valid new password is provided", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      await user.type(screen.getByLabelText(/new password/i), "newpassword123");
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("shows a validation error when the name is too short", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      await user.clear(screen.getByLabelText("Name"));
+      await user.type(screen.getByLabelText("Name"), "Ab");
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Name must be at least 3 characters")).toBeInTheDocument()
+      );
+    });
+
+    it("shows a validation error for an invalid email", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      await user.clear(screen.getByLabelText("Email"));
+      await user.type(screen.getByLabelText("Email"), "not-an-email");
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Enter a valid email address")).toBeInTheDocument()
+      );
+    });
+
+    it("shows a validation error when the new password is too short", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+
+      await user.type(screen.getByLabelText(/new password/i), "short");
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument()
+      );
+    });
+
+    it("shows a server error on a failed update", async () => {
+      server.use(
+        http.patch("/api/admin/users/:id", () =>
+          HttpResponse.json({ error: "A user with that email already exists." }, { status: 409 })
+        )
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() =>
+        expect(screen.getByText("A user with that email already exists.")).toBeInTheDocument()
+      );
+    });
+
+    it("disables the submit button and shows 'Saving…' while the request is in-flight", async () => {
+      let unblock!: () => void;
+      const blocked = new Promise<void>((r) => { unblock = r; });
+      server.use(
+        http.patch("/api/admin/users/:id", async () => {
+          await blocked;
+          return HttpResponse.json({ success: true });
+        })
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const row = screen.getByText("Alice Admin").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: /edit/i }));
+      await user.click(screen.getByRole("button", { name: "Save Changes" }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled()
+      );
+
+      unblock();
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     });
   });
 
