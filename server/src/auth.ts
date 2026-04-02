@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db";
+import { Role } from "./generated/prisma/client";
 
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN;
 if (!CLIENT_ORIGIN) throw new Error("CLIENT_ORIGIN environment variable is required");
@@ -19,7 +20,6 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24,     // 24 hours
     updateAge: 60 * 60,           // refresh session if older than 1 hour
-    cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
   advanced: {
     useSecureCookies: process.env.BETTER_AUTH_URL?.startsWith("https://") ?? false,
@@ -30,7 +30,7 @@ export const auth = betterAuth({
       role: {
         type: "string",
         required: true,
-        defaultValue: "agent" as const,
+        defaultValue: Role.agent,
         input: false,
       },
     },

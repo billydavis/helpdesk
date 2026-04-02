@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, NavLink } from "react-router";
+import { Role } from "core";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +20,7 @@ export default function Layout() {
             <NavLink to="/" className="font-semibold hover:text-muted-foreground">
               Helpdesk
             </NavLink>
-            {session?.user.role === "admin" && (
+            {session?.user.role === Role.admin && (
               <NavLink
                 to="/users"
                 className={({ isActive }) =>

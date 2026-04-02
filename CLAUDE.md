@@ -80,7 +80,7 @@ helpdesk/
 ## Authorization
 
 - `client/src/components/AdminRoute.tsx` guards routes to admin-only users — wrap `<Route>` elements in `App.tsx` with it
-- For conditional nav items, check `session?.user.role === "admin"` directly in the component
+- For conditional nav items, check `session?.user.role === Role.admin` using the `Role` enum from `core`
 
 ## Component & Unit Testing
 
@@ -110,7 +110,9 @@ Use the `playwright-e2e-writer` agent for all Playwright test writing. Do not wr
 - **Statuses:** open, resolved, closed
 - **Categories:** General Question, Technical Question, Refund Request
 - **Roles:** admin (full access), agent (ticket work)
-- Use the `Role` enum from `server/src/generated/prisma/client` for role values — never hardcode `"admin"` or `"agent"` as strings
+- Always use the `Role` enum from `core` for role values — never hardcode `"admin"` or `"agent"` as strings
+  - Client: `import { Role } from "core"`
+  - Server: `import { Role } from "core"` for comparisons; the Prisma-generated `Role` from `./generated/prisma/client` is also acceptable for Prisma operations but `core` is preferred for consistency
 
 ## Documentation
 

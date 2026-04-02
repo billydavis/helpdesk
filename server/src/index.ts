@@ -5,6 +5,7 @@ import { rateLimit } from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { requireAuth, requireRole } from "./middleware/auth";
+import { Role } from "./generated/prisma/client";
 import usersRouter from "./routes/users";
 
 // CLIENT_ORIGIN is validated in auth.ts (imported above)
@@ -61,7 +62,7 @@ app.get("/api/me", requireAuth, (req, res) => {
 // Admin-only routes — both requireAuth and requireRole("admin") are pre-applied
 const adminRouter = express.Router();
 adminRouter.use(requireAuth);
-adminRouter.use(requireRole("admin"));
+adminRouter.use(requireRole(Role.admin));
 app.use("/api/admin", adminRouter);
 
 adminRouter.use("/users", usersRouter);

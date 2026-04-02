@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import { screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -426,17 +426,32 @@ describe("UsersPage", () => {
   });
 
   describe("delete user", () => {
-    it("removes a user after confirmed deletion", async () => {
-      vi.spyOn(window, "confirm").mockReturnValue(true);
+    it("does not show a delete button for admin users", async () => {
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Alice Admin"));
+
+      const adminRow = screen.getByText("Alice Admin").closest("tr")!;
+      const agentRow = screen.getByText("Bob Agent").closest("tr")!;
+      expect(within(adminRow).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+      expect(within(agentRow).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    });
+
+    it("opens a confirmation dialog with the user's name when Delete is clicked", async () => {
       const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Bob Agent"));
 
-      server.use(
-        http.get("/api/admin/users", ({ request }) => {
-          // Return empty list after delete so invalidation reflects the change
-          return HttpResponse.json({ users: USERS });
-        })
-      );
+      const row = screen.getByText("Bob Agent").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: "Delete" }));
 
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toBeInTheDocument();
+      expect(within(dialog).getByRole("heading", { name: "Delete User" })).toBeInTheDocument();
+      expect(within(dialog).getByText(/Bob Agent/)).toBeInTheDocument();
+    });
+
+    it("deletes the user and closes the dialog on confirmation", async () => {
+      const user = userEvent.setup();
       renderWithProviders(<UsersPage />);
       await waitFor(() => screen.getByText("Bob Agent"));
 
@@ -445,12 +460,14 @@ describe("UsersPage", () => {
       const row = screen.getByText("Bob Agent").closest("tr")!;
       await user.click(within(row).getByRole("button", { name: "Delete" }));
 
+      const dialog = screen.getByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
       await waitFor(() => expect(screen.queryByText("Bob Agent")).not.toBeInTheDocument());
-      vi.restoreAllMocks();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    it("does not delete when confirmation is cancelled", async () => {
-      vi.spyOn(window, "confirm").mockReturnValue(false);
+    it("closes the dialog without deleting when Cancel is clicked", async () => {
       const user = userEvent.setup();
       renderWithProviders(<UsersPage />);
       await waitFor(() => screen.getByText("Bob Agent"));
@@ -458,12 +475,14 @@ describe("UsersPage", () => {
       const row = screen.getByText("Bob Agent").closest("tr")!;
       await user.click(within(row).getByRole("button", { name: "Delete" }));
 
+      const dialog = screen.getByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
       expect(screen.getByText("Bob Agent")).toBeInTheDocument();
-      vi.restoreAllMocks();
     });
 
-    it("shows an error message when deletion fails", async () => {
-      vi.spyOn(window, "confirm").mockReturnValue(true);
+    it("shows an error inside the dialog when deletion fails", async () => {
       server.use(
         http.delete("/api/admin/users/:id", () =>
           HttpResponse.json({ error: "You cannot delete your own account." }, { status: 400 })
@@ -477,10 +496,42 @@ describe("UsersPage", () => {
       const row = screen.getByText("Bob Agent").closest("tr")!;
       await user.click(within(row).getByRole("button", { name: "Delete" }));
 
+      const dialog = screen.getByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
       await waitFor(() =>
-        expect(screen.getByText("You cannot delete your own account.")).toBeInTheDocument()
+        expect(within(dialog).getByText("You cannot delete your own account.")).toBeInTheDocument()
       );
-      vi.restoreAllMocks();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("disables the delete button and shows 'Deleting…' while in-flight", async () => {
+      let unblock!: () => void;
+      const blocked = new Promise<void>((r) => { unblock = r; });
+      server.use(
+        http.delete("/api/admin/users/:id", async () => {
+          await blocked;
+          return HttpResponse.json({ success: true });
+        })
+      );
+
+      const user = userEvent.setup();
+      renderWithProviders(<UsersPage />);
+      await waitFor(() => screen.getByText("Bob Agent"));
+
+      const row = screen.getByText("Bob Agent").closest("tr")!;
+      await user.click(within(row).getByRole("button", { name: "Delete" }));
+
+      const dialog = screen.getByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+      await waitFor(() =>
+        expect(within(dialog).getByRole("button", { name: "Deleting…" })).toBeDisabled()
+      );
+      expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+      unblock();
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     });
   });
 });

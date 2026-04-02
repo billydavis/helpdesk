@@ -19,6 +19,7 @@ function parseBody<T>(schema: ZodSchema<T>, body: unknown, res: Response): T | n
 
 router.get("/", async (_req, res) => {
   const users = await prisma.user.findMany({
+    where: { deletedAt: null },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
@@ -86,7 +87,11 @@ router.delete("/:id", async (req, res) => {
   if (req.params.id === req.authSession!.user.id) {
     return void res.status(400).json({ error: "You cannot delete your own account." });
   }
-  await prisma.user.delete({ where: { id: req.params.id } });
+  await prisma.user.update({
+    where: { id: req.params.id },
+    data: { deletedAt: new Date() },
+  });
+  await prisma.session.deleteMany({ where: { userId: req.params.id } });
   res.json({ success: true });
 });
 

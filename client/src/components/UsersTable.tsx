@@ -14,20 +14,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Role } from "core";
 import { EditUserDialog } from "@/components/EditUserDialog";
+import { DeleteUserDialog } from "@/components/DeleteUserDialog";
 
 type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "agent";
+  role: Role;
   createdAt: string;
 };
 
 export function UsersTable() {
   const queryClient = useQueryClient();
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data, isError, isLoading } = useQuery({
     queryKey: ["users"],
@@ -41,6 +44,7 @@ export function UsersTable() {
     mutationFn: (userId: string) => axios.delete(`/api/admin/users/${userId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      setDeletingUser(null);
       setDeleteError(null);
     },
     onError: (err) => {
@@ -51,11 +55,6 @@ export function UsersTable() {
     },
   });
 
-  async function handleDelete(userId: string, userName: string) {
-    if (!confirm(`Delete user "${userName}"? This cannot be undone.`)) return;
-    deleteMutation.mutate(userId);
-  }
-
   return (
     <>
       <EditUserDialog
@@ -63,8 +62,15 @@ export function UsersTable() {
         open={editingUser !== null}
         onOpenChange={(open) => { if (!open) setEditingUser(null); }}
       />
+      <DeleteUserDialog
+        user={deletingUser}
+        open={deletingUser !== null}
+        onOpenChange={(open) => { if (!open) { setDeletingUser(null); setDeleteError(null); } }}
+        onConfirm={() => deleteMutation.mutate(deletingUser!.id)}
+        isPending={deleteMutation.isPending}
+        error={deleteError}
+      />
       {isError && <p className="text-sm text-destructive">Failed to load users.</p>}
-      {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
 
       <Card>
         <Table>
@@ -101,8 +107,8 @@ export function UsersTable() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={user.role === "admin" ? "default" : "secondary"}
-                      className={user.role === "agent" ? "bg-green-100 text-green-800 hover:bg-green-100 border-transparent" : ""}
+                      variant={user.role === Role.admin ? "default" : "secondary"}
+                      className={user.role === Role.agent ? "bg-green-100 text-green-800 hover:bg-green-100 border-transparent" : ""}
                     >
                       {user.role}
                     </Badge>
@@ -119,16 +125,17 @@ export function UsersTable() {
                     >
                       <Pencil />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Delete"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDelete(user.id, user.name)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 />
-                    </Button>
+                    {user.role !== Role.admin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Delete"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeletingUser(user)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
