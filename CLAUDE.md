@@ -22,13 +22,15 @@ An AI-powered ticket management system that receives support emails, creates tic
 
 ```
 helpdesk/
+  core/         # Shared schemas and types (Bun workspace)
   client/       # React frontend (Vite, port 5173)
   server/       # Express backend (port 5150)
 ```
 
 ## Key Decisions
 
-- Bun workspaces monorepo — client and server share a single `bun.lock`
+- Bun workspaces monorepo — client, server, and core share a single `bun.lock`
+- Shared validation schemas live in `core/src/schemas/` and are imported by both client and server as `import { ... } from "core"`
 - Vite proxies `/api/*` to the Express server — no CORS issues in development
 - Single admin seeded on first deploy; admin creates agent accounts
 
@@ -63,6 +65,18 @@ helpdesk/
 - Users have a `role` field: `admin` or `agent` (default)
 - Better Auth context7 library ID: `/better-auth/better-auth`
 
+## Shared Schemas (core package)
+
+- Define Zod schemas that are needed by both client and server in `core/src/schemas/` and export them from `core/src/index.ts`
+- Import shared schemas in both client and server as `import { ... } from "core"`
+- Do not duplicate schema definitions — if a schema exists in `core`, reference it rather than redefining it locally
+
+## Forms
+
+- Use **React Hook Form** + **Zod** for all forms — `useForm` with `zodResolver` from `@hookform/resolvers/zod`
+- Define a Zod schema, infer the form type with `z.infer<typeof schema>`, and pass the resolver to `useForm`
+- Display field errors from `formState.errors` inline below each input; use `setError("root", ...)` for server-level errors
+
 ## Authorization
 
 - `client/src/components/AdminRoute.tsx` guards routes to admin-only users — wrap `<Route>` elements in `App.tsx` with it
@@ -96,6 +110,7 @@ Use the `playwright-e2e-writer` agent for all Playwright test writing. Do not wr
 - **Statuses:** open, resolved, closed
 - **Categories:** General Question, Technical Question, Refund Request
 - **Roles:** admin (full access), agent (ticket work)
+- Use the `Role` enum from `server/src/generated/prisma/client` for role values — never hardcode `"admin"` or `"agent"` as strings
 
 ## Documentation
 

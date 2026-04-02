@@ -61,22 +61,23 @@ describe("UsersPage", () => {
     });
   });
 
-  describe("create user form", () => {
-    it("is hidden by default", () => {
+  describe("create user modal", () => {
+    it("dialog is closed by default", () => {
       renderWithProviders(<UsersPage />);
-      expect(screen.queryByText("New User")).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    it("opens and closes with the Create User / Cancel button", async () => {
+    it("opens on New User click and closes with the X button", async () => {
       const user = userEvent.setup();
       renderWithProviders(<UsersPage />);
       await waitFor(() => screen.getByText("Alice Admin"));
 
-      await user.click(screen.getByRole("button", { name: "Create User" }));
-      expect(screen.getByText("New User")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "New User" }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Create User" })).toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Cancel" }));
-      expect(screen.queryByText("New User")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Close" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     });
 
     it("shows validation errors for empty submission", async () => {
@@ -84,29 +85,29 @@ describe("UsersPage", () => {
       renderWithProviders(<UsersPage />);
       await waitFor(() => screen.getByText("Alice Admin"));
 
+      await user.click(screen.getByRole("button", { name: "New User" }));
       await user.click(screen.getByRole("button", { name: "Create User" }));
-      await user.click(screen.getByRole("button", { name: "Create User", hidden: true }));
 
       await waitFor(() => {
-        expect(screen.getByText("Name is required")).toBeInTheDocument();
+        expect(screen.getByText("Name must be at least 3 characters")).toBeInTheDocument();
         expect(screen.getByText("Enter a valid email address")).toBeInTheDocument();
-        expect(screen.getByText("Password must be at least 12 characters")).toBeInTheDocument();
+        expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
       });
     });
 
-    it("submits the form and closes it on success", async () => {
+    it("submits the form and closes the modal on success", async () => {
       const user = userEvent.setup();
       renderWithProviders(<UsersPage />);
       await waitFor(() => screen.getByText("Alice Admin"));
 
-      await user.click(screen.getByRole("button", { name: "Create User" }));
+      await user.click(screen.getByRole("button", { name: "New User" }));
       await user.type(screen.getByLabelText("Name"), "Carol New");
       await user.type(screen.getByLabelText("Email"), "carol@example.com");
-      await user.type(screen.getByLabelText("Password"), "supersecret1234");
+      await user.type(screen.getByLabelText("Password"), "supersecret");
 
-      await user.click(screen.getByRole("button", { name: "Create User", hidden: true }));
+      await user.click(screen.getByRole("button", { name: "Create User" }));
 
-      await waitFor(() => expect(screen.queryByText("New User")).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     });
 
     it("shows a server error on failed create", async () => {
@@ -120,11 +121,11 @@ describe("UsersPage", () => {
       renderWithProviders(<UsersPage />);
       await waitFor(() => screen.getByText("Alice Admin"));
 
-      await user.click(screen.getByRole("button", { name: "Create User" }));
+      await user.click(screen.getByRole("button", { name: "New User" }));
       await user.type(screen.getByLabelText("Name"), "Carol New");
       await user.type(screen.getByLabelText("Email"), "carol@example.com");
-      await user.type(screen.getByLabelText("Password"), "supersecret1234");
-      await user.click(screen.getByRole("button", { name: "Create User", hidden: true }));
+      await user.type(screen.getByLabelText("Password"), "supersecret");
+      await user.click(screen.getByRole("button", { name: "Create User" }));
 
       await waitFor(() =>
         expect(screen.getByText("A user with that email already exists.")).toBeInTheDocument()
