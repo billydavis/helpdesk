@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -19,6 +19,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { TicketStatus, TicketCategory } from "core";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -110,15 +118,32 @@ export function TicketsTable() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
+  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "all">("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const sortBy = sorting[0]?.id ?? "createdAt";
   const sortOrder = sorting[0]?.desc === false ? "asc" : "desc";
 
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["tickets", sortBy, sortOrder],
+    queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search],
     queryFn: () =>
       axios
-        .get<{ tickets: Ticket[] }>("/api/tickets", { params: { sortBy, sortOrder } })
+        .get<{ tickets: Ticket[] }>("/api/tickets", {
+          params: {
+            sortBy,
+            sortOrder,
+            ...(statusFilter !== "all" && { status: statusFilter }),
+            ...(categoryFilter !== "all" && { category: categoryFilter }),
+            ...(search && { search }),
+          },
+        })
         .then((r) => r.data.tickets),
   });
 
@@ -136,6 +161,36 @@ export function TicketsTable() {
   return (
     <>
       {isError && <p className="text-sm text-destructive">Failed to load tickets.</p>}
+      <div className="flex gap-3">
+        <Input
+          placeholder="Search tickets..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="w-64"
+        />
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as TicketStatus | "all")}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value={TicketStatus.open}>Open</SelectItem>
+            <SelectItem value={TicketStatus.resolved}>Resolved</SelectItem>
+            <SelectItem value={TicketStatus.closed}>Closed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as TicketCategory | "all")}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value={TicketCategory.general_question}>General Question</SelectItem>
+            <SelectItem value={TicketCategory.technical_question}>Technical Question</SelectItem>
+            <SelectItem value={TicketCategory.refund_request}>Refund Request</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <Card>
         <Table>
           <TableHeader>
