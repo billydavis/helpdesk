@@ -21,6 +21,16 @@
  *  - Admin can unassign a ticket (select "Unassigned") and the dropdown reverts
  *  - The agents list in the dropdown includes all non-deleted users
  *
+ * Update ticket status and category:
+ *  - Status dropdown shows "open" for a newly created ticket
+ *  - Admin can change status from open → resolved; dropdown reflects the new value
+ *  - Status change persists after page reload
+ *  - Category dropdown shows "None" for a ticket without a category
+ *  - Admin can set category to a specific value; dropdown reflects it
+ *  - Admin can clear category back to "None"; dropdown reflects it
+ *  - Category change persists after page reload
+ *  - After changing status on the detail page, navigating to the list shows the updated badge
+ *
  * Implementation notes:
  *  - Tickets are seeded via the email webhook (POST /api/webhooks/email with
  *    multipart/form-data), matching the pattern used in tickets.spec.ts.
@@ -35,6 +45,10 @@
  *    so assign/unassign tests have a real user to work with.
  *  - Each test seeds its own ticket with a unique subject (suffixed with Date.now())
  *    to stay isolated from other tests.
+ *  - Three comboboxes exist simultaneously on the detail page (Status, Category,
+ *    Assigned to). Each is scoped via its label <p> sibling: use
+ *    page.getByText("Status", { exact: true }).locator("..").getByRole("combobox")
+ *    to avoid ambiguous locator errors.
  */
 
 import { test, expect, type Page, type APIRequestContext } from "@playwright/test";
@@ -120,9 +134,7 @@ async function seedTicket(
  */
 async function goToTicketDetail(page: Page, ticketId: number): Promise<void> {
   await page.goto(`/tickets/${ticketId}`);
-  await expect(
-    page.getByRole("heading", { name: "Back to Tickets" })
-  ).toBeVisible();
+  await expect(page.getByRole("combobox").first()).toBeVisible();
 }
 
 /**
@@ -214,15 +226,8 @@ test.describe("Ticket detail page", () => {
       });
 
       await page.goto(`/tickets/${ticketId}`);
-      await expect(
-        page.getByRole("heading", { name: "Back to Tickets" })
-      ).toBeVisible();
 
-      // The ArrowLeft icon button sits in a flex row next to the "Back to Tickets"
-      // heading. The button has no text label so we locate it via its parent
-      // container — the div that also contains the heading.
-      const headerRow = page.getByRole("heading", { name: "Back to Tickets" }).locator("..");
-      await headerRow.getByRole("button").click();
+      await page.getByRole("button", { name: "Back to Tickets" }).click();
 
       await expect(page).toHaveURL("/tickets");
       await expect(
@@ -281,10 +286,9 @@ test.describe("Ticket detail page", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
-      // The From section renders "Alice Sender (alice.sender@example.com)"
-      await expect(page.getByText("Alice Sender")).toBeVisible();
+      // The From section renders "Alice Sender (alice.sender@example.com)" as a single string
       await expect(
-        page.getByText("(alice.sender@example.com)")
+        page.getByText("Alice Sender (alice.sender@example.com)", { exact: false })
       ).toBeVisible();
     });
 
@@ -301,10 +305,13 @@ test.describe("Ticket detail page", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
-      // Email appears without parentheses wrapper
-      await expect(page.getByText("bare.sender@example.com")).toBeVisible();
+      // The From: metadata line shows the bare email without parentheses.
+      // Note: the email also appears in the message box subheader ("From bare.sender@example.com"),
+      // so we scope the parentheses check to the metadata <p> that starts with "From:".
+      await expect(page.getByText("bare.sender@example.com").first()).toBeVisible();
+      // No parentheses wrapper should appear anywhere in the From metadata line
       await expect(
-        page.getByText("(bare.sender@example.com)")
+        page.getByText(/\(bare\.sender@example\.com\)/)
       ).not.toBeVisible();
     });
 
@@ -319,15 +326,13 @@ test.describe("Ticket detail page", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
-      // The "Received" label must be visible as a metadata field header
-      await expect(
-        page.getByText("Received", { exact: true })
-      ).toBeVisible();
-
-      // A formatted date string should appear beneath it. We check for the
-      // current year as a proxy — toLocaleString() will always include it.
+      // The "Created:" label must be visible as a metadata field header.
+      // toLocaleString() embeds the label and date in one <p>; locate it by the
+      // "Created:" prefix so we also implicitly verify the formatted date is present.
       const currentYear = new Date().getFullYear().toString();
-      await expect(page.getByText(new RegExp(currentYear))).toBeVisible();
+      await expect(
+        page.getByText(new RegExp(`Created:.*${currentYear}`))
+      ).toBeVisible();
     });
 
     test("detail page shows the message body", async ({ page }) => {
@@ -414,10 +419,12 @@ test.describe("Assign ticket to agent", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
+      // Scope to the "Assigned to" section to avoid matching Status or Category
+      const assignedSection = page
+        .getByText("Assigned to", { exact: true })
+        .locator("..");
       // The Select trigger renders with role="combobox" in Radix UI
-      await expect(
-        page.getByRole("combobox")
-      ).toBeVisible();
+      await expect(assignedSection.getByRole("combobox")).toBeVisible();
     });
 
     test('dropdown shows "Unassigned" when ticket has no assignment', async ({
@@ -433,10 +440,12 @@ test.describe("Assign ticket to agent", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
+      // Scope to the "Assigned to" section to avoid matching Status or Category
+      const assignedSection = page
+        .getByText("Assigned to", { exact: true })
+        .locator("..");
       // The trigger should display "Unassigned" as the selected value
-      await expect(
-        page.getByRole("combobox")
-      ).toHaveText("Unassigned");
+      await expect(assignedSection.getByRole("combobox")).toHaveText("Unassigned");
     });
 
     test("dropdown lists all agents from GET /api/agents", async ({ page }) => {
@@ -454,8 +463,12 @@ test.describe("Assign ticket to agent", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
+      // Scope to the "Assigned to" section to avoid matching Status or Category
+      const assignedSection = page
+        .getByText("Assigned to", { exact: true })
+        .locator("..");
       // Open the dropdown
-      await page.getByRole("combobox").click();
+      await assignedSection.getByRole("combobox").click();
 
       // The "Unassigned" option must always be present
       await expect(
@@ -490,8 +503,14 @@ test.describe("Assign ticket to agent", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
+      // Scope to the "Assigned to" section to avoid matching Status or Category
+      const assignedSection = page
+        .getByText("Assigned to", { exact: true })
+        .locator("..");
+      const assignedCombobox = assignedSection.getByRole("combobox");
+
       // Open the "Assigned to" dropdown
-      await page.getByRole("combobox").click();
+      await assignedCombobox.click();
 
       // Select the dedicated assign agent
       await page.getByRole("option", { name: ASSIGN_AGENT_NAME }).click();
@@ -499,9 +518,7 @@ test.describe("Assign ticket to agent", () => {
       // The dropdown trigger should now display the agent's name.
       // Wait for the mutation to settle — TanStack Query invalidates and
       // refetches, so the displayed value updates from the re-fetched ticket.
-      await expect(
-        page.getByRole("combobox")
-      ).toHaveText(ASSIGN_AGENT_NAME);
+      await expect(assignedCombobox).toHaveText(ASSIGN_AGENT_NAME);
     });
 
     test("assigned agent name persists after page reload", async ({ page }) => {
@@ -532,10 +549,12 @@ test.describe("Assign ticket to agent", () => {
       // Navigate to the page fresh — not via the UI assign flow
       await page.goto(`/tickets/${ticketId}`);
 
+      // Scope to the "Assigned to" section to avoid matching Status or Category
+      const assignedSection = page
+        .getByText("Assigned to", { exact: true })
+        .locator("..");
       // The dropdown should show the assigned agent's name on initial load
-      await expect(
-        page.getByRole("combobox")
-      ).toHaveText(ASSIGN_AGENT_NAME);
+      await expect(assignedSection.getByRole("combobox")).toHaveText(ASSIGN_AGENT_NAME);
     });
 
     test("admin can unassign a ticket by selecting Unassigned", async ({
@@ -563,19 +582,401 @@ test.describe("Assign ticket to agent", () => {
 
       await page.goto(`/tickets/${ticketId}`);
 
+      // Scope to the "Assigned to" section to avoid matching Status or Category
+      const assignedSection = page
+        .getByText("Assigned to", { exact: true })
+        .locator("..");
+      const assignedCombobox = assignedSection.getByRole("combobox");
+
       // Confirm the ticket is shown as assigned
-      await expect(
-        page.getByRole("combobox")
-      ).toHaveText(ASSIGN_AGENT_NAME);
+      await expect(assignedCombobox).toHaveText(ASSIGN_AGENT_NAME);
 
       // Open the dropdown and select "Unassigned"
-      await page.getByRole("combobox").click();
+      await assignedCombobox.click();
       await page.getByRole("option", { name: "Unassigned" }).click();
 
       // Dropdown should revert to "Unassigned"
-      await expect(
-        page.getByRole("combobox")
-      ).toHaveText("Unassigned");
+      await expect(assignedCombobox).toHaveText("Unassigned");
+    });
+  });
+});
+
+// ===========================================================================
+// Update ticket status and category
+// ===========================================================================
+
+/**
+ * Three comboboxes exist simultaneously on the detail page (Status, Category,
+ * Assigned to). Scope each lookup to its section by finding the parent <div>
+ * of the label <p> element immediately above the Select trigger.
+ *
+ *  DOM shape (one section):
+ *    <div>                          ← locator anchor
+ *      <p>Status</p>
+ *      <button role="combobox">…</button>
+ *    </div>
+ */
+
+test.describe("Update ticket status and category", () => {
+  // -------------------------------------------------------------------------
+  // Status dropdown
+  // -------------------------------------------------------------------------
+
+  test.describe("Status dropdown", () => {
+    test('status dropdown shows "open" for a newly created ticket', async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Status initial value test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "status-initial@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      // Scope to the Status section to avoid matching Category or Assigned to
+      const statusSection = page
+        .getByText("Status", { exact: true })
+        .locator("..");
+      await expect(statusSection.getByRole("combobox")).toHaveText("Open");
+    });
+
+    test("admin can change status from open to resolved", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Change status to resolved test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "status-change@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const statusSection = page
+        .getByText("Status", { exact: true })
+        .locator("..");
+      const statusCombobox = statusSection.getByRole("combobox");
+
+      // Confirm starting value
+      await expect(statusCombobox).toHaveText("Open");
+
+      // Open the status dropdown and select "Resolved"
+      await statusCombobox.click();
+      await page.getByRole("option", { name: "Resolved" }).click();
+
+      // The trigger should now reflect the new status. TanStack Query
+      // invalidates ["ticket", id] on success and refetches, so the displayed
+      // value comes from the server response.
+      await expect(statusCombobox).toHaveText("Resolved");
+    });
+
+    test("status change persists after page reload", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Status persist reload test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "status-persist@example.com",
+        subject,
+      });
+
+      // Change status via API directly so this test is independent of the UI
+      // mutation flow tested above.
+      const patchResponse = await page.request.patch(
+        `/api/tickets/${ticketId}`,
+        {
+          data: { status: "closed" },
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      expect(patchResponse.status()).toBe(200);
+
+      // Navigate fresh — no cached query state
+      await page.goto(`/tickets/${ticketId}`);
+
+      const statusSection = page
+        .getByText("Status", { exact: true })
+        .locator("..");
+      await expect(statusSection.getByRole("combobox")).toHaveText("Closed");
+    });
+
+    test("admin can change status from resolved back to open", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Change status back to open test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "status-reopen@example.com",
+        subject,
+      });
+
+      // Pre-set to resolved via API
+      await page.request.patch(`/api/tickets/${ticketId}`, {
+        data: { status: "resolved" },
+        headers: { "Content-Type": "application/json" },
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const statusSection = page
+        .getByText("Status", { exact: true })
+        .locator("..");
+      const statusCombobox = statusSection.getByRole("combobox");
+
+      await expect(statusCombobox).toHaveText("Resolved");
+
+      // Reopen via the UI
+      await statusCombobox.click();
+      await page.getByRole("option", { name: "Open" }).click();
+
+      await expect(statusCombobox).toHaveText("Open");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Category dropdown
+  // -------------------------------------------------------------------------
+
+  test.describe("Category dropdown", () => {
+    test('category dropdown shows "None" for a ticket without a category', async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Category initial none test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-none@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      // Tickets created via the email webhook have no category set
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      await expect(categorySection.getByRole("combobox")).toHaveText("None");
+    });
+
+    test("admin can set category to General Question", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Set category general test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-general@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      const categoryCombobox = categorySection.getByRole("combobox");
+
+      await expect(categoryCombobox).toHaveText("None");
+
+      // Open the category dropdown and choose "General Question"
+      await categoryCombobox.click();
+      await page.getByRole("option", { name: "General Question" }).click();
+
+      await expect(categoryCombobox).toHaveText("General Question");
+    });
+
+    test("admin can set category to Technical Question", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Set category technical test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-technical@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      const categoryCombobox = categorySection.getByRole("combobox");
+
+      await categoryCombobox.click();
+      await page.getByRole("option", { name: "Technical Question" }).click();
+
+      await expect(categoryCombobox).toHaveText("Technical Question");
+    });
+
+    test("admin can clear category back to None", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Clear category test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-clear@example.com",
+        subject,
+      });
+
+      // Pre-set a category via API so the test starts with a non-null category
+      const patchResponse = await page.request.patch(
+        `/api/tickets/${ticketId}`,
+        {
+          data: { category: "refund_request" },
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      expect(patchResponse.status()).toBe(200);
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      const categoryCombobox = categorySection.getByRole("combobox");
+
+      // Should display the pre-set category
+      await expect(categoryCombobox).toHaveText("Refund Request");
+
+      // Clear it back to None
+      await categoryCombobox.click();
+      await page.getByRole("option", { name: "None" }).click();
+
+      await expect(categoryCombobox).toHaveText("None");
+    });
+
+    test("category change persists after page reload", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Category persist reload test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-persist@example.com",
+        subject,
+      });
+
+      // Set category via API
+      const patchResponse = await page.request.patch(
+        `/api/tickets/${ticketId}`,
+        {
+          data: { category: "technical_question" },
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      expect(patchResponse.status()).toBe(200);
+
+      // Navigate fresh to verify the value comes from the server, not cached state
+      await page.goto(`/tickets/${ticketId}`);
+
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      await expect(categorySection.getByRole("combobox")).toHaveText(
+        "Technical Question"
+      );
+    });
+
+    test("cleared category (None) persists after page reload", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Cleared category persist test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-cleared-persist@example.com",
+        subject,
+      });
+
+      // Pre-set category then clear it via the UI to exercise the full round-trip
+      await page.goto(`/tickets/${ticketId}`);
+
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      const categoryCombobox = categorySection.getByRole("combobox");
+
+      // Set to General Question first
+      await categoryCombobox.click();
+      await page.getByRole("option", { name: "General Question" }).click();
+      await expect(categoryCombobox).toHaveText("General Question");
+
+      // Now clear it
+      await categoryCombobox.click();
+      await page.getByRole("option", { name: "None" }).click();
+      await expect(categoryCombobox).toHaveText("None");
+
+      // Reload and verify the server persisted null
+      await page.reload();
+      await expect(categorySection.getByRole("combobox")).toHaveText("None");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Reflected in the ticket list
+  // -------------------------------------------------------------------------
+
+  test.describe("Changes reflected in the ticket list", () => {
+    test("after changing status to resolved, the list row shows the updated badge", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Status list reflection test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "status-list@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const statusSection = page
+        .getByText("Status", { exact: true })
+        .locator("..");
+      const statusCombobox = statusSection.getByRole("combobox");
+
+      // Change status to resolved via the dropdown
+      await statusCombobox.click();
+      await page.getByRole("option", { name: "Resolved" }).click();
+      await expect(statusCombobox).toHaveText("Resolved");
+
+      // Navigate back to the list
+      await page.getByRole("button", { name: "Back to Tickets" }).click();
+      await expect(page).toHaveURL("/tickets");
+
+      // The row for this ticket should now show "resolved" as its status badge
+      const row = page.getByRole("row", { name: new RegExp(subject) });
+      await expect(row).toBeVisible();
+      await expect(row.getByText("resolved")).toBeVisible();
+    });
+
+    test("after changing category, the list row shows the updated category", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Category list reflection test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "cat-list@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const categorySection = page
+        .getByText("Category", { exact: true })
+        .locator("..");
+      const categoryCombobox = categorySection.getByRole("combobox");
+
+      // Set category to Refund Request
+      await categoryCombobox.click();
+      await page.getByRole("option", { name: "Refund Request" }).click();
+      await expect(categoryCombobox).toHaveText("Refund Request");
+
+      // Navigate back to the list
+      await page.getByRole("button", { name: "Back to Tickets" }).click();
+      await expect(page).toHaveURL("/tickets");
+
+      // The row for this ticket should now show "Refund Request" in the Category column
+      const row = page.getByRole("row", { name: new RegExp(subject) });
+      await expect(row).toBeVisible();
+      await expect(row.getByText("Refund Request")).toBeVisible();
     });
   });
 });

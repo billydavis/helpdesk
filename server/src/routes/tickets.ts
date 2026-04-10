@@ -5,7 +5,9 @@ import { TicketStatus, TicketCategory } from "core";
 import { Prisma } from "../generated/prisma/client";
 
 const patchTicketSchema = z.object({
-  assignedToId: z.string().nullable(),
+  assignedToId: z.string().nullable().optional(),
+  status: z.nativeEnum(TicketStatus).optional(),
+  category: z.nativeEnum(TicketCategory).nullable().optional(),
 });
 
 const router = Router();
@@ -85,6 +87,7 @@ router.get("/:id", async (req, res) => {
       status: true,
       category: true,
       createdAt: true,
+      updatedAt: true,
       assignedTo: { select: { id: true, name: true, email: true } },
     },
   });
@@ -110,9 +113,9 @@ router.patch("/:id", async (req, res) => {
     return;
   }
 
-  const { assignedToId } = result.data;
+  const { assignedToId, status, category } = result.data;
 
-  if (assignedToId !== null) {
+  if (assignedToId !== undefined && assignedToId !== null) {
     const agent = await prisma.user.findUnique({ where: { id: assignedToId } });
     if (!agent || agent.deletedAt) {
       res.status(400).json({ error: "Agent not found" });
@@ -122,9 +125,15 @@ router.patch("/:id", async (req, res) => {
 
   const ticket = await prisma.ticket.update({
     where: { id },
-    data: { assignedToId: assignedToId ?? null },
+    data: {
+      ...(assignedToId !== undefined && { assignedToId }),
+      ...(status !== undefined && { status }),
+      ...(category !== undefined && { category }),
+    },
     select: {
       id: true,
+      status: true,
+      category: true,
       assignedTo: { select: { id: true, name: true, email: true } },
     },
   });

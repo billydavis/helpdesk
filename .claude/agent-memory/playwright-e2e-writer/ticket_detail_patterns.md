@@ -51,3 +51,21 @@ await db.end();
 ## "Assigned to" label
 
 The "Assigned to" text is rendered as a `<p>` element in the metadata grid, not as an accessible label connected to the Select trigger. Assert it with `page.getByText("Assigned to", { exact: true })` separately from the combobox assertion.
+
+## Multiple comboboxes on the same page
+
+`TicketDetailPage` renders three `role="combobox"` triggers (Status, Category, Assigned to) inside a `grid grid-cols-3` div. Using bare `page.getByRole("combobox")` will be ambiguous. Scope each lookup to its section via the label `<p>` sibling's parent `<div>`:
+
+```ts
+const statusSection = page.getByText("Status", { exact: true }).locator("..");
+const statusCombobox = statusSection.getByRole("combobox");
+
+const categorySection = page.getByText("Category", { exact: true }).locator("..");
+const categoryCombobox = categorySection.getByRole("combobox");
+```
+
+After clicking any combobox trigger, `page.getByRole("option", { name })` finds options globally (Radix portal) — no scoping needed for the option list itself.
+
+## Changing status/category via API in test setup
+
+Use `page.request.patch("/api/tickets/:id", { data: { status: "closed" }, headers: { "Content-Type": "application/json" } })` to pre-set status or category without going through the UI. The PATCH endpoint accepts any subset of `{ status, category, assignedToId }`.
