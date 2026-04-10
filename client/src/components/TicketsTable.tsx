@@ -27,8 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { TicketStatus, TicketCategory } from "core";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Ticket {
   id: number;
@@ -122,32 +123,42 @@ export function TicketsTable() {
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "all">("all");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter]);
+
   const sortBy = sorting[0]?.id ?? "createdAt";
   const sortOrder = sorting[0]?.desc === false ? "asc" : "desc";
 
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search],
+    queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search, page],
     queryFn: () =>
       axios
-        .get<{ tickets: Ticket[] }>("/api/tickets", {
+        .get<{ tickets: Ticket[]; total: number; page: number; pageSize: number }>("/api/tickets", {
           params: {
             sortBy,
             sortOrder,
+            page,
+            pageSize,
             ...(statusFilter !== "all" && { status: statusFilter }),
             ...(categoryFilter !== "all" && { category: categoryFilter }),
             ...(search && { search }),
           },
         })
-        .then((r) => r.data.tickets),
+        .then((r) => r.data),
   });
 
-  const tickets = data ?? [];
+  const tickets = data?.tickets ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
 
   const table = useReactTable({
     data: tickets,
@@ -244,6 +255,34 @@ export function TicketsTable() {
           </TableBody>
         </Table>
       </Card>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground whitespace-nowrap">
+            Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, total)} of {total} tickets
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
