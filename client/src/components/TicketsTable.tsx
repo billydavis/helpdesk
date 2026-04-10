@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TicketStatus, TicketCategory } from "core";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { STATUS_STYLES, CATEGORY_LABELS } from "@/lib/ticket-styles";
 
 interface Ticket {
   id: number;
@@ -40,18 +42,6 @@ interface Ticket {
   category: TicketCategory | null;
   createdAt: string;
 }
-
-const STATUS_STYLES: Record<TicketStatus, string> = {
-  [TicketStatus.open]: "bg-blue-100 text-blue-800 hover:bg-blue-100 border-transparent",
-  [TicketStatus.resolved]: "bg-green-100 text-green-800 hover:bg-green-100 border-transparent",
-  [TicketStatus.closed]: "bg-gray-100 text-gray-600 hover:bg-gray-100 border-transparent",
-};
-
-const CATEGORY_LABELS: Record<TicketCategory, string> = {
-  [TicketCategory.general_question]: "General Question",
-  [TicketCategory.technical_question]: "Technical Question",
-  [TicketCategory.refund_request]: "Refund Request",
-};
 
 const columnHelper = createColumnHelper<Ticket>();
 
@@ -64,7 +54,14 @@ const columns = [
   }),
   columnHelper.accessor("subject", {
     header: "Subject",
-    cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+    cell: (info) => (
+      <Link
+        to={`/tickets/${info.row.original.id}`}
+        className="font-medium"
+      >
+        {info.getValue()}
+      </Link>
+    ),
   }),
   columnHelper.accessor("fromEmail", {
     header: "From",
@@ -124,7 +121,7 @@ export function TicketsTable() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const pageSize = 10;
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);

@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
   const categoryRaw = req.query.category as string | undefined;
   const search = req.query.search as string | undefined;
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
-  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 10));
 
   const sortBy: SortableColumn = SORTABLE_COLUMNS.includes(sortByRaw as SortableColumn)
     ? (sortByRaw as SortableColumn)
@@ -60,6 +60,35 @@ router.get("/", async (req, res) => {
   ]);
 
   res.json({ tickets, total, page, pageSize });
+});
+
+router.get("/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      subject: true,
+      fromEmail: true,
+      fromName: true,
+      body: true,
+      status: true,
+      category: true,
+      createdAt: true,
+    },
+  });
+
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  res.json(ticket);
 });
 
 export default router;
