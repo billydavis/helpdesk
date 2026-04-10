@@ -7,6 +7,7 @@ import { auth } from "./auth";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { Role } from "./generated/prisma/client";
 import usersRouter from "./routes/users";
+import ticketsRouter from "./routes/tickets";
 import emailWebhookRouter from "./routes/email";
 import { validateWebhookSecret } from "./middleware/validateWebhookSecret";
 
@@ -56,6 +57,8 @@ app.all(
 );
 
 app.use(express.json());
+
+app.use("/api/tickets", requireAuth, ticketsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

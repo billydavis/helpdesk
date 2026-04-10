@@ -18,13 +18,13 @@ import { Role } from "core";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { DeleteUserDialog } from "@/components/DeleteUserDialog";
 
-type User = {
+interface User {
   id: string;
   name: string;
   email: string;
   role: Role;
   createdAt: string;
-};
+}
 
 export function UsersTable() {
   const queryClient = useQueryClient();

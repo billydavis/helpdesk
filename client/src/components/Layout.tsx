@@ -20,6 +20,14 @@ export default function Layout() {
             <NavLink to="/" className="font-semibold hover:text-muted-foreground">
               Helpdesk
             </NavLink>
+            <NavLink
+              to="/tickets"
+              className={({ isActive }) =>
+                `text-sm font-medium ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`
+              }
+            >
+              Tickets
+            </NavLink>
             {session?.user.role === Role.admin && (
               <NavLink
                 to="/users"

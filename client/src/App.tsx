@@ -4,6 +4,7 @@ import AdminRoute from "./components/AdminRoute";
 import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import TicketsPage from "./pages/TicketsPage";
 import UsersPage from "./pages/UsersPage";
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         }
       >
         <Route path="/" element={<HomePage />} />
+        <Route path="/tickets" element={<TicketsPage />} />
         <Route
           path="/users"
           element={
