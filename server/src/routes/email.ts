@@ -22,7 +22,7 @@ router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
       data: {
         fromEmail,
         fromName: fromName ?? null,
-        subject: subject.trim(),
+        subject: normalizeSubject(subject),
         body,
         rawPayload: req.body,
       },
@@ -47,6 +47,16 @@ function resolveBody(text: string | undefined, html: string | undefined): string
   if (text?.trim()) return text.trim();
   if (html?.trim()) return convert(html, { wordwrap: false });
   return "";
+}
+
+function normalizeSubject(subject: string): string {
+  // Strip leading Re:, Fwd:, Fw: prefixes (case-insensitive, repeated)
+  let s = subject.trim();
+  const prefix = /^(re|fwd?)\s*:\s*/i;
+  while (prefix.test(s)) {
+    s = s.replace(prefix, "").trim();
+  }
+  return s;
 }
 
 export default router;

@@ -6,3 +6,4 @@
 - [Route protection behavior](route_protection_behavior.md) — ProtectedRoute redirects to /login; AdminRoute redirects agent to /
 - [Agent creation helper](agent_creation_helper.md) — e2e/helpers/create-agent.ts mirrors seed.ts using Prisma + hashPassword
 - [User management test patterns](user_management_patterns.md) — API seeding in beforeEach, dialog scoping, row targeting by email, admin row has no Delete button
+- [Webhook testing patterns](webhook_testing_patterns.md) — multipart/form-data via request fixture, direct DB verify, SENDGRID_WEBHOOK_PUBLIC_KEY placeholder required

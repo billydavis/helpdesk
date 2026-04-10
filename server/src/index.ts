@@ -8,6 +8,7 @@ import { requireAuth, requireRole } from "./middleware/auth";
 import { Role } from "./generated/prisma/client";
 import usersRouter from "./routes/users";
 import emailWebhookRouter from "./routes/email";
+import { validateWebhookSecret } from "./middleware/validateWebhookSecret";
 
 // CLIENT_ORIGIN is validated in auth.ts (imported above)
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN!;
@@ -37,7 +38,11 @@ const authLimiter = rateLimit({
 const isProduction = process.env.NODE_ENV === "production";
 
 // Must be mounted before express.json()
-app.use("/api/webhooks/email", emailWebhookRouter);
+// All webhook routes require the x-webhook-secret header
+const webhooksRouter = express.Router();
+webhooksRouter.use(validateWebhookSecret);
+webhooksRouter.use("/email", emailWebhookRouter);
+app.use("/api/webhooks", webhooksRouter);
 
 app.post(
   "/api/auth/sign-in/email",
