@@ -1,13 +1,26 @@
 import { useParams, useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TicketStatus, TicketCategory } from "core";
 import { ArrowLeft } from "lucide-react";
 import { STATUS_STYLES, CATEGORY_LABELS } from "@/lib/ticket-styles";
+
+interface Agent {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface TicketDetail {
   id: number;
@@ -18,11 +31,15 @@ interface TicketDetail {
   status: TicketStatus;
   category: TicketCategory | null;
   createdAt: string;
+  assignedTo: Agent | null;
 }
+
+const UNASSIGNED = "__unassigned__";
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: ticket, isLoading, isError } = useQuery({
     queryKey: ["ticket", id],
@@ -30,6 +47,26 @@ export default function TicketDetailPage() {
       axios.get<TicketDetail>(`/api/tickets/${id}`).then((r) => r.data),
     enabled: !!id,
   });
+
+  const { data: agentsData } = useQuery({
+    queryKey: ["agents"],
+    queryFn: () =>
+      axios.get<{ agents: Agent[] }>("/api/agents").then((r) => r.data),
+  });
+
+  const agents = agentsData?.agents ?? [];
+
+  const assignMutation = useMutation({
+    mutationFn: (assignedToId: string | null) =>
+      axios.patch(`/api/tickets/${id}`, { assignedToId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+    },
+  });
+
+  const handleAssign = (value: string) => {
+    assignMutation.mutate(value === UNASSIGNED ? null : value);
+  };
 
   return (
     <div className="space-y-6">
@@ -71,7 +108,7 @@ export default function TicketDetailPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground mb-1">From</p>
                 <p className="font-medium">
@@ -92,6 +129,26 @@ export default function TicketDetailPage() {
                 <p className="font-medium">
                   {new Date(ticket.createdAt).toLocaleString()}
                 </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-2">Assigned to</p>
+                <Select
+                  value={ticket.assignedTo?.id ?? UNASSIGNED}
+                  onValueChange={handleAssign}
+                  disabled={assignMutation.isPending}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

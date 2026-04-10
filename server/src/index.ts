@@ -6,6 +6,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { requireAuth, requireRole } from "./middleware/auth";
 import { Role } from "./generated/prisma/client";
+import { prisma } from "./db";
 import usersRouter from "./routes/users";
 import ticketsRouter from "./routes/tickets";
 import emailWebhookRouter from "./routes/email";
@@ -59,6 +60,15 @@ app.all(
 app.use(express.json());
 
 app.use("/api/tickets", requireAuth, ticketsRouter);
+
+app.get("/api/agents", requireAuth, async (_req, res) => {
+  const agents = await prisma.user.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  });
+  res.json({ agents });
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

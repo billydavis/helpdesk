@@ -1,7 +1,12 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../db";
 import { TicketStatus, TicketCategory } from "core";
 import { Prisma } from "../generated/prisma/client";
+
+const patchTicketSchema = z.object({
+  assignedToId: z.string().nullable(),
+});
 
 const router = Router();
 
@@ -80,6 +85,7 @@ router.get("/:id", async (req, res) => {
       status: true,
       category: true,
       createdAt: true,
+      assignedTo: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -87,6 +93,41 @@ router.get("/:id", async (req, res) => {
     res.status(404).json({ error: "Ticket not found" });
     return;
   }
+
+  res.json(ticket);
+});
+
+router.patch("/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const result = patchTicketSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues[0].message });
+    return;
+  }
+
+  const { assignedToId } = result.data;
+
+  if (assignedToId !== null) {
+    const agent = await prisma.user.findUnique({ where: { id: assignedToId } });
+    if (!agent || agent.deletedAt) {
+      res.status(400).json({ error: "Agent not found" });
+      return;
+    }
+  }
+
+  const ticket = await prisma.ticket.update({
+    where: { id },
+    data: { assignedToId: assignedToId ?? null },
+    select: {
+      id: true,
+      assignedTo: { select: { id: true, name: true, email: true } },
+    },
+  });
 
   res.json(ticket);
 });

@@ -17,9 +17,12 @@ function parseBody<T>(schema: ZodSchema<T>, body: unknown, res: Response): T | n
   return result.data;
 }
 
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
+  const roleRaw = req.query.role as string | undefined;
+  const roleFilter = roleRaw === Role.admin || roleRaw === Role.agent ? roleRaw : undefined;
+
   const users = await prisma.user.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, ...(roleFilter && { role: roleFilter }) },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
