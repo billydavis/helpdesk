@@ -20,7 +20,9 @@
       "Bash(node:*)",
       "Bash(bunx playwright:*)",
       "Bash(bun add:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(find:*)",
+      "Bash(cat /c/Users/billy/source/repos/helpdesk/server/src/types/*.ts)"
     ]
   }
 }
