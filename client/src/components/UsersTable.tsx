@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import ErrorAlert from "@/components/ErrorAlert";
 import { useState } from "react";
 import axios from "axios";
 import { Pencil, Trash2 } from "lucide-react";
@@ -70,7 +71,7 @@ export function UsersTable() {
         isPending={deleteMutation.isPending}
         error={deleteError}
       />
-      {isError && <p className="text-sm text-destructive">Failed to load users.</p>}
+      {isError && <ErrorAlert message="Failed to load users." />}
 
       <Card>
         <Table>

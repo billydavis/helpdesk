@@ -393,6 +393,97 @@ test.describe("Ticket detail page", () => {
         page.getByText("Failed to load ticket.")
       ).toBeVisible();
     });
+
+    test("detail page shows the Updated timestamp", async ({ page }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Updated timestamp display test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "updated-ts@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      // TicketDetail renders both "Created:" and "Updated:" in the metadata block.
+      // We check "Updated:" with the current year to confirm the formatted date
+      // is actually present (not just the label).
+      const currentYear = new Date().getFullYear().toString();
+      await expect(
+        page.getByText(new RegExp(`Updated:.*${currentYear}`))
+      ).toBeVisible();
+    });
+
+    test("Message card shows sender byline with display name when present", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Message card byline with name test ${Date.now()}`;
+      // "Name <email>" format is parsed by the webhook into fromName + fromEmail.
+      const ticketId = await seedTicket(page.request, {
+        from: "Bob Builder <bob@example.com>",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      // TicketDetail renders "From Bob Builder" as a subheader inside the message card
+      // when fromName is present (uses fromName ?? fromEmail).
+      await expect(page.getByText("From Bob Builder")).toBeVisible();
+    });
+
+    test("Message card shows sender byline with email when fromName is absent", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Message card byline email-only test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "noname-byline@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      // TicketDetail renders "From noname-byline@example.com" inside the message card
+      // when fromName is null.
+      await expect(page.getByText("From noname-byline@example.com")).toBeVisible();
+    });
+
+    test("a failed ticket fetch shows the error alert without navigating away", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Fetch error alert test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "fetch-error@example.com",
+        subject,
+      });
+
+      // Intercept GET /api/tickets/:id and return a 500 before the page renders
+      // ticket data. This exercises the isError branch in TicketDetailPage which
+      // renders <ErrorAlert message="Failed to load ticket." />.
+      await page.route(`**/api/tickets/${ticketId}`, (route) => {
+        if (route.request().method() === "GET") {
+          route.fulfill({
+            status: 500,
+            contentType: "application/json",
+            body: JSON.stringify({ error: "Internal server error" }),
+          });
+        } else {
+          route.continue();
+        }
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      await expect(page.getByText("Failed to load ticket.")).toBeVisible();
+
+      // The user must remain on the same route — no redirect on error.
+      await expect(page).toHaveURL(`/tickets/${ticketId}`);
+    });
   });
 });
 
@@ -699,6 +790,34 @@ test.describe("Update ticket status and category", () => {
         .getByText("Status", { exact: true })
         .locator("..");
       await expect(statusSection.getByRole("combobox")).toHaveText("Closed");
+    });
+
+    test("admin can change status from open to closed via the UI", async ({
+      page,
+    }) => {
+      await loginAsAdmin(page);
+
+      const subject = `Change status to closed via UI test ${Date.now()}`;
+      const ticketId = await seedTicket(page.request, {
+        from: "status-close-ui@example.com",
+        subject,
+      });
+
+      await page.goto(`/tickets/${ticketId}`);
+
+      const statusSection = page
+        .getByText("Status", { exact: true })
+        .locator("..");
+      const statusCombobox = statusSection.getByRole("combobox");
+
+      await expect(statusCombobox).toHaveText("Open");
+
+      // Open the status dropdown and pick "Closed"
+      await statusCombobox.click();
+      await page.getByRole("option", { name: "Closed" }).click();
+
+      // The trigger should reflect the updated status returned by the server.
+      await expect(statusCombobox).toHaveText("Closed");
     });
 
     test("admin can change status from resolved back to open", async ({

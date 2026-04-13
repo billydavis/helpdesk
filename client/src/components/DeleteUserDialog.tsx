@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import ErrorAlert from "@/components/ErrorAlert";
 import {
   Dialog,
   DialogContent,
@@ -34,9 +35,7 @@ export function DeleteUserDialog({ user, open, onOpenChange, onConfirm, isPendin
             This cannot be undone.
           </DialogDescription>
         </DialogHeader>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">{error}</p>
-        )}
+        {error && <ErrorAlert message={error} />}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancel

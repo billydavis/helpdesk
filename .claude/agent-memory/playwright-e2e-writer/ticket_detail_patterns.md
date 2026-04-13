@@ -69,3 +69,17 @@ After clicking any combobox trigger, `page.getByRole("option", { name })` finds 
 ## Changing status/category via API in test setup
 
 Use `page.request.patch("/api/tickets/:id", { data: { status: "closed" }, headers: { "Content-Type": "application/json" } })` to pre-set status or category without going through the UI. The PATCH endpoint accepts any subset of `{ status, category, assignedToId }`.
+
+## TicketDetail metadata structure
+
+`TicketDetail.tsx` renders two independent areas for sender info:
+
+1. **Metadata block** (above the message card) — `From:` label with `"Name (email)"` when `fromName` is set, or bare `email` when `fromName` is null. Also renders `Created:` and `Updated:` timestamps via `toLocaleString()`.
+
+2. **Message card byline** (inside the `rounded-md border p-4` card) — renders `"From Name"` (uses `fromName ?? fromEmail`) as a secondary paragraph below the `"Message"` heading. Locate with `page.getByText("From Bob Builder")` or `page.getByText("From noname@example.com")`.
+
+To assert timestamps are present with a formatted date (not just the label), use a regex: `page.getByText(new RegExp("Updated:.*2026"))`.
+
+## Detecting the existing ticket-detail.spec.ts
+
+`e2e/ticket-detail.spec.ts` is comprehensive — it covers access control, navigation, metadata display, status/category/assignment mutations, persistence after reload, and list reflection. Before adding new detail-page tests, check what is already covered there to avoid duplication. The file also contains the `seedTicket` / `goToTicketDetail` / `getAgents` helpers that are the canonical pattern for this spec file.

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ErrorAlert from "@/components/ErrorAlert";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,9 +104,7 @@ export function CreateUserDialog() {
               )}
             />
             {form.formState.errors.root && (
-              <p role="alert" className="text-sm text-destructive">
-                {form.formState.errors.root.message}
-              </p>
+              <ErrorAlert message={form.formState.errors.root.message!} />
             )}
             <DialogFooter>
               <Button type="submit" disabled={mutation.isPending}>

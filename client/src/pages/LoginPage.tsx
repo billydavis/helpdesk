@@ -1,4 +1,5 @@
 import { Navigate, useNavigate } from "react-router";
+import ErrorAlert from "@/components/ErrorAlert";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -76,7 +77,7 @@ export default function LoginPage() {
               </div>
 
               {errors.root && (
-                <p role="alert" className="text-sm text-destructive">{errors.root.message}</p>
+                <ErrorAlert message={errors.root.message!} />
               )}
 
               <Button type="submit" disabled={isSubmitting} className="w-full">

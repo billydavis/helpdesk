@@ -29,6 +29,11 @@ enum TicketCategory {
   refund_request
 }
 
+enum SenderType {
+  agent
+  customer
+}
+
 model Ticket {
   id           Int             @id @default(autoincrement())
   fromEmail    String
@@ -40,8 +45,20 @@ model Ticket {
   rawPayload   Json?
   assignedToId String?
   assignedTo   User?           @relation(fields: [assignedToId], references: [id])
+  replies      Reply[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+}
+
+model Reply {
+  id         Int        @id @default(autoincrement())
+  ticketId   Int
+  ticket     Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id])
+  senderType SenderType
+  body       String
+  createdAt  DateTime   @default(now())
 }
 
 model User {
@@ -57,6 +74,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   tickets       Ticket[]
+  replies       Reply[]
 }
 
 model Session {

@@ -24,7 +24,8 @@
       "Bash(find:*)",
       "Bash(cat /c/Users/billy/source/repos/helpdesk/server/src/types/*.ts)",
       "Bash(bunx shadcn@latest add select --yes)",
-      "Bash(bunx shadcn@latest:*)"
+      "Bash(bunx shadcn@latest:*)",
+      "Bash(bunx tsc:*)"
     ]
   }
 }

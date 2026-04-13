@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
-import { TicketStatus, TicketCategory } from "core";
+import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "core";
 import { Prisma } from "../generated/prisma/client";
 
 const patchTicketSchema = z.object({
@@ -139,6 +139,74 @@ router.patch("/:id", async (req, res) => {
   });
 
   res.json(ticket);
+});
+
+router.get("/:id/replies", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: id },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      body: true,
+      senderType: true,
+      createdAt: true,
+      author: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  res.json({ replies });
+});
+
+router.post("/:id/replies", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const result = createReplySchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues[0].message });
+    return;
+  }
+
+  const authorId = req.authSession!.user.id;
+
+  const reply = await prisma.reply.create({
+    data: {
+      ticketId: id,
+      authorId,
+      senderType: SenderType.agent,
+      body: result.data.body,
+    },
+    select: {
+      id: true,
+      body: true,
+      senderType: true,
+      createdAt: true,
+      author: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  res.status(201).json(reply);
 });
 
 export default router;

@@ -5,6 +5,8 @@ export const inboundEmailSchema = z.object({
   subject: z.string().min(1, "subject is required"),
   text: z.string().optional(),
   html: z.string().optional(),
+  headers: z.string().optional(), // raw email headers block from SendGrid
+  to: z.string().optional(),      // envelope recipient (for future reply-to-address routing)
 });
 
 export type InboundEmail = z.infer<typeof inboundEmailSchema>;

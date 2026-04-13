@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ErrorAlert from "@/components/ErrorAlert";
 import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -29,21 +30,11 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { TicketStatus, TicketCategory } from "core";
+import { TicketStatus, TicketCategory, TicketSummary } from "core";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { STATUS_STYLES, CATEGORY_LABELS } from "@/lib/ticket-styles";
 
-interface Ticket {
-  id: number;
-  subject: string;
-  fromEmail: string;
-  fromName: string | null;
-  status: TicketStatus;
-  category: TicketCategory | null;
-  createdAt: string;
-}
-
-const columnHelper = createColumnHelper<Ticket>();
+const columnHelper = createColumnHelper<TicketSummary>();
 
 const columns = [
   columnHelper.accessor("id", {
@@ -138,7 +129,7 @@ export function TicketsTable() {
     queryKey: ["tickets", sortBy, sortOrder, statusFilter, categoryFilter, search, page],
     queryFn: () =>
       axios
-        .get<{ tickets: Ticket[]; total: number; page: number; pageSize: number }>("/api/tickets", {
+        .get<{ tickets: TicketSummary[]; total: number; page: number; pageSize: number }>("/api/tickets", {
           params: {
             sortBy,
             sortOrder,
@@ -168,7 +159,7 @@ export function TicketsTable() {
 
   return (
     <>
-      {isError && <p className="text-sm text-destructive">Failed to load tickets.</p>}
+      {isError && <ErrorAlert message="Failed to load tickets." />}
       <div className="flex gap-3">
         <Input
           placeholder="Search tickets..."
