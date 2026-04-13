@@ -4,8 +4,8 @@
  * End-to-end tests for the email ingestion webhook: POST /api/webhooks/email
  *
  * Coverage:
- *  - Valid payload with text body creates a ticket and returns 200
- *  - Valid payload with html body (no text) creates a ticket with converted plain-text body
+ *  - Valid payload with body creates a ticket and returns 200
+ *  - Valid payload with bodyHtml (no body) stores raw HTML in the ticket body
  *  - from field in "Name <email>" format is parsed into fromName + fromEmail
  *  - from field as bare email sets fromEmail and leaves fromName null
  *  - Missing `from` field returns 400 with fieldErrors
@@ -149,7 +149,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject,
-          text: "This is the plain text body.",
+          body: "This is the plain text body.",
         },
       });
 
@@ -163,7 +163,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       expect(ticket!.category).toBeNull();
     });
 
-    test("valid payload with html body and no text creates a ticket with converted plain-text body", async ({
+    test("valid payload with bodyHtml and no body stores raw HTML", async ({
       request,
     }) => {
       const subject = `HTML body test ${Date.now()}`;
@@ -172,7 +172,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject,
-          html: "<p>Hello <strong>world</strong></p>",
+          bodyHtml: "<p>Hello <strong>world</strong></p>",
         },
       });
 
@@ -180,12 +180,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       const ticket = await findTicketBySubject(db, subject);
       expect(ticket).not.toBeNull();
-      // html-to-text strips tags; the body must contain the visible text
-      expect(ticket!.body).toContain("Hello");
-      expect(ticket!.body).toContain("world");
-      // Must not contain raw HTML tags
-      expect(ticket!.body).not.toContain("<p>");
-      expect(ticket!.body).not.toContain("<strong>");
+      expect(ticket!.body).toBe("<p>Hello <strong>world</strong></p>");
     });
 
     test("from field in display-name format is parsed into fromName and fromEmail", async ({
@@ -197,7 +192,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "John Smith <john@example.com>",
           subject,
-          text: "Hello from John.",
+          body: "Hello from John.",
         },
       });
 
@@ -218,7 +213,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "bare@example.com",
           subject,
-          text: "No display name here.",
+          body: "No display name here.",
         },
       });
 
@@ -230,17 +225,17 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       expect(ticket!.fromName).toBeNull();
     });
 
-    test("text body is preferred over html when both are present", async ({
+    test("bodyHtml is preferred over body when both are present", async ({
       request,
     }) => {
-      const subject = `Text preferred over html ${Date.now()}`;
+      const subject = `HTML preferred over text ${Date.now()}`;
 
       const response = await request.post(WEBHOOK_URL, {
         multipart: {
           from: "sender@example.com",
           subject,
-          text: "Plain text wins",
-          html: "<p>HTML loses</p>",
+          body: "Plain text",
+          bodyHtml: "<p>HTML wins</p>",
         },
       });
 
@@ -248,7 +243,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       const ticket = await findTicketBySubject(db, subject);
       expect(ticket).not.toBeNull();
-      expect(ticket!.body).toBe("Plain text wins");
+      expect(ticket!.body).toBe("<p>HTML wins</p>");
     });
 
     test("ticket is created with status open by default", async ({
@@ -260,7 +255,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "status@example.com",
           subject,
-          text: "Checking default status.",
+          body: "Checking default status.",
         },
       });
 
@@ -283,7 +278,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       const response = await request.post(WEBHOOK_URL, {
         multipart: {
           subject: "Missing from field",
-          text: "Some body text.",
+          body: "Some body text.",
         },
       });
 
@@ -300,7 +295,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       const response = await request.post(WEBHOOK_URL, {
         multipart: {
           from: "sender@example.com",
-          text: "Some body text.",
+          body: "Some body text.",
         },
       });
 
@@ -318,7 +313,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "",
           subject: "Empty from test",
-          text: "Some body text.",
+          body: "Some body text.",
         },
       });
 
@@ -336,7 +331,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: "",
-          text: "Some body text.",
+          body: "Some body text.",
         },
       });
 
@@ -352,7 +347,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
     }) => {
       const response = await request.post(WEBHOOK_URL, {
         multipart: {
-          text: "Only a body, nothing else.",
+          body: "Only a body, nothing else.",
         },
       });
 
@@ -376,7 +371,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: "Auth test",
-          text: "Body text.",
+          body: "Body text.",
         },
       });
 
@@ -389,7 +384,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: "Auth test",
-          text: "Body text.",
+          body: "Body text.",
         },
       });
 
@@ -409,7 +404,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       // First email → creates the ticket
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject, text: "Initial message." },
+        multipart: { from: "customer@example.com", subject, body: "Initial message." },
       });
 
       const ticket = await findTicketBySubject(db, subject);
@@ -418,7 +413,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       // Second email with Re: prefix → should be detected as a reply
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, text: "Follow-up message." },
+        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, body: "Follow-up message." },
       });
 
       // Still only one ticket with this subject
@@ -437,7 +432,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       const subject = `Reopen resolved ticket test ${Date.now()}`;
 
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject, text: "Initial message." },
+        multipart: { from: "customer@example.com", subject, body: "Initial message." },
       });
 
       const ticket = await findTicketBySubject(db, subject);
@@ -449,7 +444,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       // Customer replies → ticket should be reopened
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, text: "Still broken!" },
+        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, body: "Still broken!" },
       });
 
       const updatedTicket = await findTicketBySubject(db, subject);
@@ -464,7 +459,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       const subject = `Closed ticket reply test ${Date.now()}`;
 
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject, text: "Initial message." },
+        multipart: { from: "customer@example.com", subject, body: "Initial message." },
       });
 
       const ticket = await findTicketBySubject(db, subject);
@@ -476,7 +471,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       // Customer replies to a closed ticket → a new ticket should be created
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, text: "New issue, same subject." },
+        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, body: "New issue, same subject." },
       });
 
       // Two tickets with this subject now exist
@@ -494,12 +489,12 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       const subject = `Different sender test ${Date.now()}`;
 
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "alice@example.com", subject, text: "Alice's message." },
+        multipart: { from: "alice@example.com", subject, body: "Alice's message." },
       });
 
       // Bob sends an email with the same subject
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "bob@example.com", subject: `Re: ${subject}`, text: "Bob's separate issue." },
+        multipart: { from: "bob@example.com", subject: `Re: ${subject}`, body: "Bob's separate issue." },
       });
 
       // Two separate tickets — one per sender
@@ -514,11 +509,11 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       const subject2 = `Same sender different subject B ${Date.now()}`;
 
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject: subject1, text: "First issue." },
+        multipart: { from: "customer@example.com", subject: subject1, body: "First issue." },
       });
 
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject: subject2, text: "Unrelated second issue." },
+        multipart: { from: "customer@example.com", subject: subject2, body: "Unrelated second issue." },
       });
 
       // Each subject produces its own ticket
@@ -536,7 +531,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       // Create two tickets with the same sender+subject by seeding them both
       // as initial emails (not replies), simulating a duplicated-ticket scenario.
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject, text: "First occurrence." },
+        multipart: { from: "customer@example.com", subject, body: "First occurrence." },
       });
 
       // Close the first one so it doesn't block the second seed from creating a ticket.
@@ -546,7 +541,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       // Second ticket with same subject (first is closed so this creates a new one)
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject, text: "Second occurrence." },
+        multipart: { from: "customer@example.com", subject, body: "Second occurrence." },
       });
 
       // Reopen both so the lookup sees two non-closed candidates
@@ -556,7 +551,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       // Now a third email arrives — two non-closed tickets match, so ambiguity → new ticket
       await request.post(WEBHOOK_URL, {
-        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, text: "Which thread is this?" },
+        multipart: { from: "customer@example.com", subject: `Re: ${subject}`, body: "Which thread is this?" },
       });
 
       const ticketCount = await countTicketsBySubject(db, subject);
@@ -578,7 +573,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: `Re: ${normalizedSubject}`,
-          text: "Reply body.",
+          body: "Reply body.",
         },
       });
 
@@ -597,7 +592,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: `Fwd: ${normalizedSubject}`,
-          text: "Forwarded body.",
+          body: "Forwarded body.",
         },
       });
 
@@ -616,7 +611,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: `Fw: ${normalizedSubject}`,
-          text: "Forwarded body.",
+          body: "Forwarded body.",
         },
       });
 
@@ -635,7 +630,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: `RE: FWD: ${normalizedSubject}`,
-          text: "Case insensitive body.",
+          body: "Case insensitive body.",
         },
       });
 
@@ -654,7 +649,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: `Re: Fwd: Re: ${normalizedSubject}`,
-          text: "Deep thread body.",
+          body: "Deep thread body.",
         },
       });
 
@@ -671,7 +666,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
         multipart: {
           from: "sender@example.com",
           subject: plainSubject,
-          text: "No prefix to strip.",
+          body: "No prefix to strip.",
         },
       });
 

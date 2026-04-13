@@ -1,6 +1,5 @@
 import { Router } from "express";
 import multer from "multer";
-import { convert } from "html-to-text";
 import { prisma } from "../db";
 import { validateEmailWebhook, InboundEmail } from "../middleware/validateEmailWebhook";
 import { SenderType } from "core";
@@ -15,10 +14,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
   try {
-    const { from, subject, text, html, headers: rawHeaders } = req.body as InboundEmail;
+    const { from, subject, body: bodyText, bodyHtml, headers: rawHeaders } = req.body as InboundEmail;
 
     const { fromEmail, fromName } = parseFrom(from);
-    const body = resolveBody(text, html);
+    const body = resolveBody(bodyText, bodyHtml);
     const normalizedSubjectStr = normalizeSubject(subject);
 
     // Parse In-Reply-To from raw email headers if SendGrid included them.
@@ -40,6 +39,7 @@ router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
             ticketId: existingTicket.id,
             senderType: SenderType.customer,
             body,
+            bodyHtml: bodyHtml?.trim() ?? null,
             // authorId intentionally omitted — null signals a customer reply
           },
         });
@@ -120,9 +120,9 @@ function parseFrom(from: string): { fromEmail: string; fromName: string | undefi
   return { fromEmail: from.trim(), fromName: undefined };
 }
 
-function resolveBody(text: string | undefined, html: string | undefined): string {
-  if (text?.trim()) return text.trim();
-  if (html?.trim()) return convert(html, { wordwrap: false });
+function resolveBody(body: string | undefined, bodyHtml: string | undefined): string {
+  if (bodyHtml?.trim()) return bodyHtml.trim();
+  if (body?.trim()) return body.trim();
   return "";
 }
 

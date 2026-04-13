@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { Ticket } from "core";
 
 interface TicketDetailProps {
@@ -33,7 +34,10 @@ export default function TicketDetail({ ticket }: TicketDetailProps) {
           <p className="text-sm text-muted-foreground">
             From {ticket.fromName ?? ticket.fromEmail}
           </p>
-          <p className="text-sm whitespace-pre-wrap">{ticket.body}</p>
+          <div
+            className="text-sm whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.body) }}
+          />
         </div>
       )}
     </div>

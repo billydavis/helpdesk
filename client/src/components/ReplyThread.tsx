@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,6 +7,7 @@ import { SenderType, Ticket } from "core";
 interface Reply {
   id: number;
   body: string;
+  bodyHtml: string | null;
   senderType: SenderType;
   createdAt: string;
   author: { id: string; name: string; email: string } | null;
@@ -59,7 +61,14 @@ export default function ReplyThread({ ticket }: ReplyThreadProps) {
                 {new Date(reply.createdAt).toLocaleString()}
               </p>
             </div>
-            <p className="text-sm whitespace-pre-wrap">{reply.body}</p>
+            {reply.bodyHtml ? (
+              <div
+                className="text-sm"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(reply.bodyHtml) }}
+              />
+            ) : (
+              <p className="text-sm whitespace-pre-wrap">{reply.body}</p>
+            )}
           </div>
         );
       })}

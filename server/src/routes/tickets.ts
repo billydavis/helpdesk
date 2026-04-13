@@ -160,6 +160,7 @@ router.get("/:id/replies", async (req, res) => {
     select: {
       id: true,
       body: true,
+      bodyHtml: true,
       senderType: true,
       createdAt: true,
       author: { select: { id: true, name: true, email: true } },
@@ -200,6 +201,7 @@ router.post("/:id/replies", async (req, res) => {
     select: {
       id: true,
       body: true,
+      bodyHtml: true,
       senderType: true,
       createdAt: true,
       author: { select: { id: true, name: true, email: true } },
