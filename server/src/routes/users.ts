@@ -94,6 +94,10 @@ router.delete("/:id", async (req, res) => {
     where: { id: req.params.id },
     data: { deletedAt: new Date() },
   });
+  await prisma.ticket.updateMany({
+    where: { assignedToId: req.params.id },
+    data: { assignedToId: null },
+  });
   await prisma.session.deleteMany({ where: { userId: req.params.id } });
   res.json({ success: true });
 });

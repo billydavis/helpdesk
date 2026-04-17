@@ -32,7 +32,7 @@ export default function UpdateTicket({ ticket }: UpdateTicketProps) {
     mutationFn: (data: { assignedToId?: string | null; status?: TicketStatus; category?: TicketCategory | null }) =>
       axios.patch(`/api/tickets/${ticket.id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket", ticket.id] });
+      queryClient.invalidateQueries({ queryKey: ["ticket", String(ticket.id)] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
   });
