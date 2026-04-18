@@ -1,13 +1,24 @@
 import { Router } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "core";
 import { Prisma } from "../generated/prisma/client";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler {
+  return (req, res, next) => { Promise.resolve(fn(req, res, next)).catch(next); };
+}
 
 const patchTicketSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   status: z.nativeEnum(TicketStatus).optional(),
   category: z.nativeEnum(TicketCategory).nullable().optional(),
+});
+
+const polishReplySchema = z.object({
+  body: z.string().min(1).max(1000),
 });
 
 const router = Router();
@@ -18,7 +29,7 @@ type SortableColumn = typeof SORTABLE_COLUMNS[number];
 const VALID_STATUSES = Object.values(TicketStatus) as string[];
 const VALID_CATEGORIES = Object.values(TicketCategory) as string[];
 
-router.get("/", async (req, res) => {
+router.get("/", asyncHandler(async (req, res) => {
   const sortByRaw = req.query.sortBy as string | undefined;
   const sortOrderRaw = req.query.sortOrder as string | undefined;
   const statusRaw = req.query.status as string | undefined;
@@ -67,9 +78,9 @@ router.get("/", async (req, res) => {
   ]);
 
   res.json({ tickets, total, page, pageSize });
-});
+}));
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ticket ID" });
@@ -98,9 +109,9 @@ router.get("/:id", async (req, res) => {
   }
 
   res.json(ticket);
-});
+}));
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ticket ID" });
@@ -139,9 +150,9 @@ router.patch("/:id", async (req, res) => {
   });
 
   res.json(ticket);
-});
+}));
 
-router.get("/:id/replies", async (req, res) => {
+router.get("/:id/replies", asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ticket ID" });
@@ -168,9 +179,49 @@ router.get("/:id/replies", async (req, res) => {
   });
 
   res.json({ replies });
-});
+}));
 
-router.post("/:id/replies", async (req, res) => {
+router.post("/:id/replies/polish", asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true, fromName: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const result = polishReplySchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues[0].message });
+    return;
+  }
+
+  const agentName = req.authSession!.user.name;
+  const customerName = ticket.fromName ?? "customer";
+
+  const { text } = await generateText({
+    model: openai("gpt-5-nano"),
+    system:
+      `You are a professional customer support agent. Improve the following
+       draft reply to make it clear, concise, and helpful. Return only the
+       improved reply text with no additional commentary or explanation.  Address
+       the customer by their name. Sign
+       the polished reply with using the agent's name to make it more personable.
+       Also include in the footer, http://billydavis.dev - which is the company
+       website.
+       Customer name: ${customerName}
+       Agent name: ${agentName}`,
+    prompt: result.data.body,
+  });
+
+  res.json({ body: text });
+}));
+
+router.post("/:id/replies", asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ticket ID" });
@@ -209,6 +260,6 @@ router.post("/:id/replies", async (req, res) => {
   });
 
   res.status(201).json(reply);
-});
+}));
 
 export default router;

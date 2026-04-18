@@ -1,8 +1,12 @@
-import { Router, type Response } from "express";
+import { Router, type Response, type Request, type NextFunction, type RequestHandler } from "express";
 import { hashPassword } from "better-auth/crypto";
 import { generateId } from "better-auth";
 import { type ZodSchema } from "zod";
 import { prisma } from "../db";
+
+function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler {
+  return (req, res, next) => { Promise.resolve(fn(req, res, next)).catch(next); };
+}
 import { Role } from "../generated/prisma/client";
 import { createUserSchema, updateUserSchema } from "core";
 
@@ -17,7 +21,7 @@ function parseBody<T>(schema: ZodSchema<T>, body: unknown, res: Response): T | n
   return result.data;
 }
 
-router.get("/", async (req, res) => {
+router.get("/", asyncHandler(async (req, res) => {
   const roleRaw = req.query.role as string | undefined;
   const roleFilter = roleRaw === Role.admin || roleRaw === Role.agent ? roleRaw : undefined;
 
@@ -27,9 +31,9 @@ router.get("/", async (req, res) => {
     orderBy: { createdAt: "asc" },
   });
   res.json({ users });
-});
+}));
 
-router.post("/", async (req, res) => {
+router.post("/", asyncHandler(async (req, res) => {
   const data = parseBody(createUserSchema, req.body, res);
   if (!data) return;
   const { name, email, password } = data;
@@ -56,9 +60,9 @@ router.post("/", async (req, res) => {
   });
 
   res.status(201).json({ success: true });
-});
+}));
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", asyncHandler(async (req, res) => {
   const data = parseBody(updateUserSchema, req.body, res);
   if (!data) return;
   const { name, email, password } = data;
@@ -84,9 +88,9 @@ router.patch("/:id", async (req, res) => {
   }
 
   res.json({ success: true });
-});
+}));
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", asyncHandler(async (req, res) => {
   if (req.params.id === req.authSession!.user.id) {
     return void res.status(400).json({ error: "You cannot delete your own account." });
   }
@@ -100,6 +104,6 @@ router.delete("/:id", async (req, res) => {
   });
   await prisma.session.deleteMany({ where: { userId: req.params.id } });
   res.json({ success: true });
-});
+}));
 
 export default router;

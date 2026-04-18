@@ -1,4 +1,5 @@
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -87,6 +88,12 @@ adminRouter.use(requireRole(Role.admin));
 app.use("/api/admin", adminRouter);
 
 adminRouter.use("/users", usersRouter);
+
+// Must be registered after all routes — catches errors forwarded via next(err)
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: "Internal server error" });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
