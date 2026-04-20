@@ -221,6 +221,51 @@ router.post("/:id/replies/polish", asyncHandler(async (req, res) => {
   res.json({ body: text });
 }));
 
+router.post("/:id/summarize", asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    select: { id: true, subject: true, fromName: true, fromEmail: true, body: true },
+  });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: id },
+    orderBy: { createdAt: "asc" },
+    select: { body: true, senderType: true, author: { select: { name: true } } },
+  });
+
+  const sender = ticket.fromName ?? ticket.fromEmail;
+  const conversation = [
+    `Customer (${sender}): ${ticket.body}`,
+    ...replies.map((r) => {
+      const label = r.senderType === SenderType.agent
+        ? `Agent (${r.author?.name ?? "Agent"})`
+        : `Customer (${sender})`;
+      return `${label}: ${r.body}`;
+    }),
+  ].join("\n\n");
+
+  const { text } = await generateText({
+    model: openai("gpt-5-nano"),
+    system:
+      `You are a helpful assistant. Summarize the following customer support ticket conversation
+       in 2-4 concise sentences. Cover the customer's issue, any key context, and the current
+       resolution status. Return only the summary with no extra commentary.`,
+    prompt: `Subject: ${ticket.subject}\n\n${conversation}`,
+  });
+
+  res.json({ summary: text });
+}));
+
 router.post("/:id/replies", asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {

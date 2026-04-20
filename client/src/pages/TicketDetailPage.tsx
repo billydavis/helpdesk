@@ -9,6 +9,7 @@ import ErrorAlert from "@/components/ErrorAlert";
 import TicketDetail from "@/components/TicketDetail";
 import TicketDetailSkeleton from "@/components/TicketDetailSkeleton";
 import UpdateTicket from "@/components/UpdateTicket";
+import TicketSummary from "@/components/TicketSummary";
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ export default function TicketDetailPage() {
         <div className="grid grid-cols-[1fr_200px] gap-8 items-start">
           <div className="space-y-6">
             <TicketDetail ticket={ticket} />
+            <TicketSummary ticket={ticket} />
             <ReplyThread ticket={ticket} />
             <ReplyForm ticket={ticket} />
           </div>
