@@ -12,6 +12,7 @@ import usersRouter from "./routes/users";
 import ticketsRouter from "./routes/tickets";
 import emailWebhookRouter from "./routes/email";
 import { validateWebhookSecret } from "./middleware/validateWebhookSecret";
+import { startQueue, stopQueue } from "./queue";
 
 // CLIENT_ORIGIN is validated in auth.ts (imported above)
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN!;
@@ -95,6 +96,22 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+async function main() {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+  await startQueue();
+}
+
+async function shutdown() {
+  await stopQueue();
+  process.exit(0);
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
+main().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
 });

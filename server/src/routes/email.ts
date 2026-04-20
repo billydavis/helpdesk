@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { validateEmailWebhook, InboundEmail } from "../middleware/validateEmailWebhook";
 import { SenderType } from "core";
 import { TicketStatus } from "../generated/prisma/client";
+import { sendClassifyJob } from "../queue";
 
 if (!process.env.SENDGRID_WEBHOOK_PUBLIC_KEY) {
   throw new Error("SENDGRID_WEBHOOK_PUBLIC_KEY environment variable is required");
@@ -45,7 +46,7 @@ router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
         });
       });
     } else {
-      await prisma.ticket.create({
+      const ticket = await prisma.ticket.create({
         data: {
           fromEmail,
           fromName: fromName ?? null,
@@ -54,6 +55,8 @@ router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
           rawPayload: req.body,
         },
       });
+
+      await sendClassifyJob({ id: ticket.id, subject: ticket.subject, body: ticket.body });
     }
 
     res.sendStatus(200);
