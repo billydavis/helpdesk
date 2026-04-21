@@ -4,7 +4,7 @@ import { prisma } from "../db";
 import { validateEmailWebhook, InboundEmail } from "../middleware/validateEmailWebhook";
 import { SenderType } from "core";
 import { TicketStatus } from "../generated/prisma/client";
-import { sendClassifyJob } from "../queue";
+import { sendClassifyJob, sendAutoResolveJob } from "../queue";
 
 if (!process.env.SENDGRID_WEBHOOK_PUBLIC_KEY) {
   throw new Error("SENDGRID_WEBHOOK_PUBLIC_KEY environment variable is required");
@@ -57,6 +57,7 @@ router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
       });
 
       await sendClassifyJob({ id: ticket.id, subject: ticket.subject, body: ticket.body });
+      await sendAutoResolveJob({ id: ticket.id, subject: ticket.subject, body: ticket.body });
     }
 
     res.sendStatus(200);

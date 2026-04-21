@@ -107,8 +107,16 @@ export function TicketsTable() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "createdAt", desc: true },
   ]);
-  const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
-  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">(() => {
+    const saved = localStorage.getItem("ticketStatusFilter");
+    const valid: (TicketStatus | "all")[] = ["all", ...Object.values(TicketStatus)];
+    return valid.includes(saved as TicketStatus | "all") ? (saved as TicketStatus | "all") : "all";
+  });
+  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | "all">(() => {
+    const saved = localStorage.getItem("ticketCategoryFilter");
+    const valid: (TicketCategory | "all")[] = ["all", ...Object.values(TicketCategory)];
+    return valid.includes(saved as TicketCategory | "all") ? (saved as TicketCategory | "all") : "all";
+  });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -118,6 +126,10 @@ export function TicketsTable() {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Persist filter selections across reloads
+  useEffect(() => { localStorage.setItem("ticketStatusFilter", statusFilter); }, [statusFilter]);
+  useEffect(() => { localStorage.setItem("ticketCategoryFilter", categoryFilter); }, [categoryFilter]);
 
   // Reset to page 1 when filters change
   useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter]);
@@ -178,6 +190,7 @@ export function TicketsTable() {
             <SelectItem value={TicketStatus.closed}>Closed</SelectItem>
           </SelectContent>
         </Select>
+
         <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as TicketCategory | "all")}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Category" />

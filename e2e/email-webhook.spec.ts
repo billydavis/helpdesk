@@ -159,7 +159,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       expect(ticket).not.toBeNull();
       expect(ticket!.fromEmail).toBe("sender@example.com");
       expect(ticket!.body).toBe("This is the plain text body.");
-      expect(ticket!.status).toBe("open");
+      expect(ticket!.status).toBe("new");
       expect(ticket!.category).toBeNull();
     });
 
@@ -246,7 +246,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
       expect(ticket!.body).toBe("<p>HTML wins</p>");
     });
 
-    test("ticket is created with status open by default", async ({
+    test("ticket is created with status new by default", async ({
       request,
     }) => {
       const subject = `Default status test ${Date.now()}`;
@@ -261,7 +261,7 @@ test.describe("Email ingestion webhook — POST /api/webhooks/email", () => {
 
       const ticket = await findTicketBySubject(db, subject);
       expect(ticket).not.toBeNull();
-      expect(ticket!.status).toBe("open");
+      expect(ticket!.status).toBe("new");
       expect(ticket!.category).toBeNull();
       expect(ticket!.assignedToId).toBeNull();
     });

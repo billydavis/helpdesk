@@ -43,11 +43,16 @@ router.get("/", asyncHandler(async (req, res) => {
     : "createdAt";
   const sortOrder = sortOrderRaw === "asc" ? "asc" : "desc";
 
-  const status = statusRaw && VALID_STATUSES.includes(statusRaw) ? (statusRaw as TicketStatus) : undefined;
+  const AGENT_VISIBLE_STATUSES = [TicketStatus.open, TicketStatus.resolved, TicketStatus.closed] as TicketStatus[];
+  const status =
+    statusRaw && AGENT_VISIBLE_STATUSES.includes(statusRaw as TicketStatus)
+      ? (statusRaw as TicketStatus)
+      : undefined;
   const category = categoryRaw && VALID_CATEGORIES.includes(categoryRaw) ? (categoryRaw as TicketCategory) : undefined;
 
   const where: Prisma.TicketWhereInput = {
-    ...(status !== undefined && { status }),
+    // new and processing are transient AI states — never shown in the agent list
+    status: status !== undefined ? status : { in: AGENT_VISIBLE_STATUSES },
     ...(category !== undefined && { category }),
     ...(search && {
       OR: [
