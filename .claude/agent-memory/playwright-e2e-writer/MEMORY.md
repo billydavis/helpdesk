@@ -10,3 +10,4 @@
 - [Ticket list test patterns](ticket_list_patterns.md) — Seed via page.request webhook, row targeting by subject regex, sort order via boundingBox().y, From field two-element rendering
 - [Ticket detail and assignment patterns](ticket_detail_patterns.md) — ID resolution via GET /api/tickets search, Radix combobox, icon-only back button, category via direct DB update
 - [Summarize feature test patterns](summarize_feature_patterns.md) — page.route() interception for AI calls, loading-state Promise gate, multi-call callCount sequences, Lucide spinner locator
+- [Dashboard stats test patterns](dashboard_stats_patterns.md) — Stat card DOM traversal, skeleton via .animate-pulse, Promise-gate for loading state, getCookieHeader for direct server requests, DB helpers for resolvedByAi and resolution time offset

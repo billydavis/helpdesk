@@ -5,6 +5,7 @@ import { validateEmailWebhook, InboundEmail } from "../middleware/validateEmailW
 import { SenderType } from "core";
 import { TicketStatus } from "../generated/prisma/client";
 import { sendClassifyJob, sendAutoResolveJob } from "../queue";
+import { AI_AGENT_ID } from "../lib/ai-agent";
 
 if (!process.env.SENDGRID_WEBHOOK_PUBLIC_KEY) {
   throw new Error("SENDGRID_WEBHOOK_PUBLIC_KEY environment variable is required");
@@ -53,6 +54,7 @@ router.post("/", upload.none(), validateEmailWebhook, async (req, res) => {
           subject: normalizedSubjectStr,
           body,
           rawPayload: req.body,
+          assignedToId: AI_AGENT_ID,
         },
       });
 

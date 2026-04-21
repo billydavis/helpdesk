@@ -35,3 +35,19 @@ export interface Ticket extends TicketSummary {
   updatedAt: string;
   assignedTo: Agent | null;
 }
+
+export interface DailyTicketCount {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+/** Shape returned by GET /api/stats */
+export interface DashboardStats {
+  totalTickets: number;
+  openTickets: number;
+  aiResolvedTickets: number;
+  aiResolvedPercent: number;
+  avgResolutionTimeMs: number | null;
+  ticketsPerDay: DailyTicketCount[];
+}
+

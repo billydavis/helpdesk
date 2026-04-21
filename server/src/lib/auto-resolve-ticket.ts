@@ -68,7 +68,7 @@ export async function autoResolveTicketWorker([job]: { data: AutoResolveJobData 
   } else {
     await prisma.ticket.update({
       where: { id },
-      data: { status: TicketStatus.open },
+      data: { status: TicketStatus.open, assignedToId: null },
     });
   }
 }

@@ -28,7 +28,8 @@
       "Bash(bunx tsc:*)",
       "Bash(bun -e ' *)",
       "Bash(npx ctx7@latest *)",
-      "Bash(bun -e \"const ai = await import\\('ai'\\); console.log\\(Object.keys\\(ai\\).filter\\(k => /generate|object/i.test\\(k\\)\\)\\)\")"
+      "Bash(bun -e \"const ai = await import\\('ai'\\); console.log\\(Object.keys\\(ai\\).filter\\(k => /generate|object/i.test\\(k\\)\\)\\)\")",
+      "Bash(bun *)"
     ]
   }
 }

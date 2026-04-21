@@ -3,9 +3,11 @@ import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
 import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "core";
+import type { DashboardStats } from "core";
 import { Prisma } from "../generated/prisma/client";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { AI_AGENT_ID, AI_AGENT } from "../lib/ai-agent";
 
 function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>): RequestHandler {
   return (req, res, next) => { Promise.resolve(fn(req, res, next)).catch(next); };
@@ -28,6 +30,13 @@ type SortableColumn = typeof SORTABLE_COLUMNS[number];
 
 const VALID_STATUSES = Object.values(TicketStatus) as string[];
 const VALID_CATEGORIES = Object.values(TicketCategory) as string[];
+
+router.get("/stats", asyncHandler(async (_req, res) => {
+  const [row] = await prisma.$queryRaw<[{ get_dashboard_stats: DashboardStats }]>(
+    Prisma.sql`SELECT get_dashboard_stats(${AI_AGENT_ID})`
+  );
+  res.json(row.get_dashboard_stats);
+}));
 
 router.get("/", asyncHandler(async (req, res) => {
   const sortByRaw = req.query.sortBy as string | undefined;
@@ -104,7 +113,7 @@ router.get("/:id", asyncHandler(async (req, res) => {
       category: true,
       createdAt: true,
       updatedAt: true,
-      assignedTo: { select: { id: true, name: true, email: true } },
+      assignedToId: true,
     },
   });
 
@@ -113,7 +122,18 @@ router.get("/:id", asyncHandler(async (req, res) => {
     return;
   }
 
-  res.json(ticket);
+  let assignedTo = null;
+  if (ticket.assignedToId === AI_AGENT_ID) {
+    assignedTo = AI_AGENT;
+  } else if (ticket.assignedToId) {
+    assignedTo = await prisma.user.findUnique({
+      where: { id: ticket.assignedToId },
+      select: { id: true, name: true, email: true },
+    });
+  }
+
+  const { assignedToId: _, ...rest } = ticket;
+  res.json({ ...rest, assignedTo });
 }));
 
 router.patch("/:id", asyncHandler(async (req, res) => {
@@ -132,6 +152,10 @@ router.patch("/:id", asyncHandler(async (req, res) => {
   const { assignedToId, status, category } = result.data;
 
   if (assignedToId !== undefined && assignedToId !== null) {
+    if (assignedToId === AI_AGENT_ID) {
+      res.status(400).json({ error: "Cannot manually assign a ticket to the AI agent." });
+      return;
+    }
     const agent = await prisma.user.findUnique({ where: { id: assignedToId } });
     if (!agent || agent.deletedAt) {
       res.status(400).json({ error: "Agent not found" });
@@ -150,11 +174,22 @@ router.patch("/:id", asyncHandler(async (req, res) => {
       id: true,
       status: true,
       category: true,
-      assignedTo: { select: { id: true, name: true, email: true } },
+      assignedToId: true,
     },
   });
 
-  res.json(ticket);
+  let assignedTo = null;
+  if (ticket.assignedToId === AI_AGENT_ID) {
+    assignedTo = AI_AGENT;
+  } else if (ticket.assignedToId) {
+    assignedTo = await prisma.user.findUnique({
+      where: { id: ticket.assignedToId },
+      select: { id: true, name: true, email: true },
+    });
+  }
+
+  const { assignedToId: _, ...rest } = ticket;
+  res.json({ ...rest, assignedTo });
 }));
 
 router.get("/:id/replies", asyncHandler(async (req, res) => {
