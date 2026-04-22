@@ -19,17 +19,27 @@ interface StatCardProps {
   title: string;
   value: string | number;
   description?: string;
+  accent?: boolean;
 }
 
-function StatCard({ title, value, description }: StatCardProps) {
+function StatCard({ title, value, description, accent }: StatCardProps) {
   return (
-    <Card>
+    <Card className="border-border bg-card shadow-none relative overflow-hidden">
+      {accent && (
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+      )}
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          {title}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold">{value}</p>
-        {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+        <p className={`font-display text-3xl font-bold tracking-tight ${accent ? "text-primary" : "text-foreground"}`}>
+          {value}
+        </p>
+        {description && (
+          <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -37,13 +47,13 @@ function StatCard({ title, value, description }: StatCardProps) {
 
 function StatCardSkeleton() {
   return (
-    <Card>
+    <Card className="border-border bg-card shadow-none">
       <CardHeader className="pb-2">
-        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-28" />
       </CardHeader>
       <CardContent>
         <Skeleton className="h-9 w-20" />
-        <Skeleton className="mt-1 h-3 w-28" />
+        <Skeleton className="mt-1.5 h-3 w-24" />
       </CardContent>
     </Card>
   );
@@ -65,8 +75,11 @@ export default function HomePage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Support queue overview</p>
+      </div>
 
       {isError && (
         <p className="text-sm text-destructive">Failed to load dashboard stats.</p>
@@ -78,7 +91,7 @@ export default function HomePage() {
         ) : data ? (
           <>
             <StatCard title="Total Tickets" value={data.totalTickets} />
-            <StatCard title="Open Tickets" value={data.openTickets} />
+            <StatCard title="Open Tickets" value={data.openTickets} accent />
             <StatCard
               title="Resolved by AI"
               value={data.aiResolvedTickets}
@@ -92,15 +105,21 @@ export default function HomePage() {
             <StatCard
               title="Avg. Resolution Time"
               value={data.avgResolutionTimeMs != null ? formatDuration(data.avgResolutionTimeMs) : "—"}
-              description={data.avgResolutionTimeMs != null ? "for resolved & closed tickets" : "no resolved tickets yet"}
+              description={
+                data.avgResolutionTimeMs != null
+                  ? "resolved & closed"
+                  : "no resolved tickets yet"
+              }
             />
           </>
         ) : null}
       </div>
 
-      <Card>
+      <Card className="border-border bg-card shadow-none">
         <CardHeader>
-          <CardTitle className="text-base font-medium">Tickets — Last 30 Days</CardTitle>
+          <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Tickets — Last 30 Days
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -108,19 +127,19 @@ export default function HomePage() {
           ) : chartData ? (
             <ChartContainer config={chartConfig} className="h-56 w-full">
               <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="label"
                   tickLine={false}
                   axisLine={false}
                   interval={4}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="count" fill="var(--color-count)" radius={[3, 3, 0, 0]} />

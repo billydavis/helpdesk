@@ -6,7 +6,6 @@ import { z } from "zod";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -26,7 +25,13 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  if (isPending) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading...</div>;
+  if (isPending) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground text-sm">
+        Loading…
+      </div>
+    );
+  }
   if (session) return <Navigate to="/" replace />;
 
   const onSubmit = async (values: FormValues) => {
@@ -41,51 +46,68 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-sm">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle>Helpdesk</CardTitle>
-            <CardDescription>Sign in to your account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor="email">Email</label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  className={errors.email ? "border-destructive" : ""}
-                  {...register("email")}
-                />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-              </div>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      {/* Subtle radial glow behind the form */}
+      <div
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background: "radial-gradient(ellipse 60% 40% at 50% 50%, oklch(0.800 0.148 192 / 0.06) 0%, transparent 70%)",
+        }}
+      />
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor="password">Password</label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  className={errors.password ? "border-destructive" : ""}
-                  {...register("password")}
-                />
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-              </div>
+      <div className="relative w-full max-w-sm space-y-8">
+        {/* Brand */}
+        <div className="text-center space-y-2">
+          <h1 className="font-display text-4xl font-bold tracking-tight">
+            Help<span className="text-primary">desk</span>
+          </h1>
+          <p className="text-sm text-muted-foreground">Sign in to your workspace</p>
+        </div>
 
-              {errors.root && (
-                <ErrorAlert message={errors.root.message!} />
+        {/* Form card */}
+        <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="email">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                className={errors.email ? "border-destructive" : ""}
+                {...register("email")}
+              />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
               )}
+            </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Signing in…" : "Sign In"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-widest text-muted-foreground" htmlFor="password">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className={errors.password ? "border-destructive" : ""}
+                {...register("password")}
+              />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+
+            {errors.root && <ErrorAlert message={errors.root.message!} />}
+
+            <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
+              {isSubmitting ? "Signing in…" : "Sign In"}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

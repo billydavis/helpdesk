@@ -38,15 +38,19 @@ export default function UpdateTicket({ ticket }: UpdateTicketProps) {
   });
 
   return (
-    <div className="space-y-4 text-sm">
-      <div>
-        <p className="text-muted-foreground mb-2">Status</p>
+    <div className="rounded-lg border border-border bg-card p-4 space-y-5">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        Properties
+      </p>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Status</label>
         <Select
           value={ticket.status}
           onValueChange={(v) => patchMutation.mutate({ status: v as TicketStatus })}
           disabled={patchMutation.isPending}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -57,8 +61,8 @@ export default function UpdateTicket({ ticket }: UpdateTicketProps) {
         </Select>
       </div>
 
-      <div>
-        <p className="text-muted-foreground mb-2">Category</p>
+      <div className="border-t border-border/50 pt-5 space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Category</label>
         <Select
           value={ticket.category ?? NO_CATEGORY}
           onValueChange={(v) =>
@@ -66,7 +70,7 @@ export default function UpdateTicket({ ticket }: UpdateTicketProps) {
           }
           disabled={patchMutation.isPending}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -80,8 +84,8 @@ export default function UpdateTicket({ ticket }: UpdateTicketProps) {
         </Select>
       </div>
 
-      <div>
-        <p className="text-muted-foreground mb-2">Assigned to</p>
+      <div className="border-t border-border/50 pt-5 space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">Assigned to</label>
         <Select
           value={ticket.assignedTo?.id ?? UNASSIGNED}
           onValueChange={(v) =>
@@ -89,7 +93,7 @@ export default function UpdateTicket({ ticket }: UpdateTicketProps) {
           }
           disabled={patchMutation.isPending}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

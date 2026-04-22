@@ -1,11 +1,11 @@
 import { TicketStatus, TicketCategory } from "core";
 
 export const STATUS_STYLES: Record<TicketStatus, string> = {
-  [TicketStatus.new]: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-transparent",
-  [TicketStatus.processing]: "bg-purple-100 text-purple-800 hover:bg-purple-100 border-transparent",
-  [TicketStatus.open]: "bg-blue-100 text-blue-800 hover:bg-blue-100 border-transparent",
-  [TicketStatus.resolved]: "bg-green-100 text-green-800 hover:bg-green-100 border-transparent",
-  [TicketStatus.closed]: "bg-gray-100 text-gray-600 hover:bg-gray-100 border-transparent",
+  [TicketStatus.new]: "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/15",
+  [TicketStatus.processing]: "bg-violet-500/15 text-violet-400 border-violet-500/30 hover:bg-violet-500/15",
+  [TicketStatus.open]: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/15",
+  [TicketStatus.resolved]: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15",
+  [TicketStatus.closed]: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30 hover:bg-zinc-500/15",
 };
 
 export const CATEGORY_LABELS: Record<TicketCategory, string> = {

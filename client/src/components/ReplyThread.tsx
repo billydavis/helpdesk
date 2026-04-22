@@ -29,31 +29,42 @@ export default function ReplyThread({ ticket }: ReplyThreadProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
       </div>
     );
   }
 
-  if (replies.length === 0) {
-    return null;
-  }
+  if (replies.length === 0) return null;
 
   return (
     <div className="space-y-3">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        Conversation
+      </p>
       {replies.map((reply) => {
         const isAgent = reply.senderType === SenderType.agent;
         return (
           <div
             key={reply.id}
-            className={`rounded-md border p-4 space-y-2 ${isAgent ? "bg-primary/5 border-primary/20" : "bg-muted/30"}`}
+            className={`rounded-lg border p-4 space-y-2.5 ${
+              isAgent
+                ? "border-primary/20 bg-primary/5"
+                : "border-border bg-card"
+            }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">
+                <p className="text-sm font-semibold text-foreground">
                   {isAgent ? (reply.author?.name ?? "Agent") : "Customer"}
                 </p>
-                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isAgent ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                    isAgent
+                      ? "bg-primary/15 text-primary"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
                   {isAgent ? "Agent" : "Customer"}
                 </span>
               </div>
@@ -63,11 +74,11 @@ export default function ReplyThread({ ticket }: ReplyThreadProps) {
             </div>
             {reply.bodyHtml ? (
               <div
-                className="text-sm"
+                className="text-sm leading-relaxed text-foreground/85"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(reply.bodyHtml) }}
               />
             ) : (
-              <p className="text-sm whitespace-pre-wrap">{reply.body}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">{reply.body}</p>
             )}
           </div>
         );

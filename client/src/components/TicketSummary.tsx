@@ -35,23 +35,24 @@ export default function TicketSummary({ ticket }: TicketSummaryProps) {
         size="sm"
         onClick={handleSummarize}
         disabled={isLoading}
+        className="text-xs gap-1.5 border-border"
       >
         {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
         ) : (
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
         )}
-        {summary ? "Regenerate Summary" : "Summarize"}
+        {summary ? "Regenerate Summary" : "Generate Summary"}
       </Button>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {summary && (
-        <div className="rounded-md border border-dashed p-4 bg-muted/40">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-primary mb-2">
             AI Summary
           </p>
-          <p className="text-sm">{summary}</p>
+          <p className="text-sm leading-relaxed text-foreground/85">{summary}</p>
         </div>
       )}
     </div>

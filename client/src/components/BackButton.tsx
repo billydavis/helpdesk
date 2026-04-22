@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 interface BackButtonProps {
@@ -11,9 +10,12 @@ export default function BackButton({ to, label }: BackButtonProps) {
   const navigate = useNavigate();
 
   return (
-    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate(to)}>
-      <ArrowLeft className="h-4 w-4" />
+    <button
+      onClick={() => navigate(to)}
+      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
       {label}
-    </Button>
+    </button>
   );
 }

@@ -29,14 +29,16 @@ export default function TicketDetailPage() {
       {isLoading ? (
         <TicketDetailSkeleton />
       ) : ticket ? (
-        <div className="grid grid-cols-[1fr_200px] gap-8 items-start">
-          <div className="space-y-6">
+        <div className="grid grid-cols-[1fr_240px] gap-8 items-start">
+          <div className="space-y-5">
             <TicketDetail ticket={ticket} />
             <TicketSummary ticket={ticket} />
             <ReplyThread ticket={ticket} />
             <ReplyForm ticket={ticket} />
           </div>
-          <UpdateTicket ticket={ticket} />
+          <div className="sticky top-6">
+            <UpdateTicket ticket={ticket} />
+          </div>
         </div>
       ) : null}
     </div>

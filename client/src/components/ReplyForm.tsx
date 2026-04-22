@@ -50,49 +50,53 @@ export default function ReplyForm({ ticket }: ReplyFormProps) {
   const isBusy = replyMutation.isPending || polishMutation.isPending;
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit((data) => replyMutation.mutate(data))}
-        className="space-y-3"
-      >
-        <FormField
-          control={form.control}
-          name="body"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <textarea
-                  {...field}
-                  rows={4}
-                  placeholder="Write a reply..."
-                  disabled={isBusy}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {replyMutation.isError && (
-          <ErrorAlert message="Failed to send reply." />
-        )}
-        {polishMutation.isError && (
-          <ErrorAlert message="Failed to polish reply." />
-        )}
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!body || isBusy}
-            onClick={() => polishMutation.mutate({ body })}
-          >
-            {polishMutation.isPending ? "Polishing…" : "Polish"}
-          </Button>
-          <Button type="submit" disabled={!body || isBusy}>
-            {replyMutation.isPending ? "Sending…" : "Send Reply"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        Reply
+      </p>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit((data) => replyMutation.mutate(data))}
+          className="space-y-3"
+        >
+          <FormField
+            control={form.control}
+            name="body"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <textarea
+                    {...field}
+                    rows={4}
+                    placeholder="Write a reply…"
+                    disabled={isBusy}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm leading-relaxed text-foreground shadow-none placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {replyMutation.isError && <ErrorAlert message="Failed to send reply." />}
+          {polishMutation.isError && <ErrorAlert message="Failed to polish reply." />}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!body || isBusy}
+              onClick={() => polishMutation.mutate({ body })}
+              className="gap-1.5 border-border"
+            >
+              <span className="text-primary text-xs">✦</span>
+              {polishMutation.isPending ? "Polishing…" : "Polish"}
+            </Button>
+            <Button type="submit" size="sm" disabled={!body || isBusy}>
+              {replyMutation.isPending ? "Sending…" : "Send Reply"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
