@@ -1,5 +1,7 @@
+import "./instrument";
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import * as Sentry from "@sentry/node";
 import cors from "cors";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
@@ -90,7 +92,9 @@ app.use("/api/admin", adminRouter);
 
 adminRouter.use("/users", usersRouter);
 
-// Must be registered after all routes — catches errors forwarded via next(err)
+// Must be registered after all routes — Sentry captures the error, then calls next(err)
+Sentry.setupExpressErrorHandler(app);
+
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
